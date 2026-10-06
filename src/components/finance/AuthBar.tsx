@@ -8,38 +8,38 @@ interface AuthBarProps {
   username: string;
   loading: boolean;
   authEnabled: boolean;
+  registrationAvailable: boolean;
+  onOpenSettings: () => void;
   signIn: (username: string, password: string) => Promise<{ error: unknown }>;
   signUp: (username: string, password: string) => Promise<{ error: unknown }>;
-  signOut: () => Promise<void>;
 }
 
-const AuthBar = ({ user, username, loading, authEnabled, signIn, signUp, signOut }: AuthBarProps) => {
+const AuthBar = ({ user, username, loading, authEnabled, registrationAvailable, onOpenSettings, signIn, signUp }: AuthBarProps) => {
   const [showForm, setShowForm] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  if (!authEnabled) return null;
-
   if (loading) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    const shouldSignIn = isLogin || !registrationAvailable;
     try {
-      const { error } = isLogin
+      const { error } = shouldSignIn
         ? await signIn(usernameInput, password)
         : await signUp(usernameInput, password);
       if (error) {
         const message = error instanceof Error ? error.message : "Authentication error";
         toast.error(message);
       } else {
-        if (isLogin) {
+        if (shouldSignIn) {
           toast.success("Signed in!");
           setShowForm(false);
         } else {
           toast.success("Registration successful! You are now logged in.");
+          setIsLogin(true);
         }
       }
     } finally {
@@ -49,21 +49,19 @@ const AuthBar = ({ user, username, loading, authEnabled, signIn, signUp, signOut
 
   if (user) {
     return (
-      <div className="flex items-center gap-1 md:gap-2 shrink-0 h-8">
-        <span className="text-xs text-foreground font-semibold max-w-[50px] sm:max-w-[100px] truncate select-none hidden sm:inline">
-          {username}
-        </span>
-        <button
-          onClick={signOut}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-border bg-transparent text-foreground text-sm font-bold hover:bg-accent transition-colors"
-          title="Sign out"
-          aria-label={`Sign out ${username}`}
-        >
-          {username.trim().charAt(0).toUpperCase() || "?"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className="flex h-10 min-w-10 items-center justify-center rounded-lg px-2 text-sm font-bold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shrink-0"
+        title="Open settings"
+        aria-label={`Open settings for ${username}`}
+      >
+        {username.trim().charAt(0).toUpperCase() || "?"}
+      </button>
     );
   }
+
+  if (!authEnabled) return null;
 
   return (
     <div className="relative shrink-0 flex items-center">
@@ -85,7 +83,7 @@ const AuthBar = ({ user, username, loading, authEnabled, signIn, signUp, signOut
           <div className="absolute right-0 top-11 mt-1 bg-card border border-border/90 rounded-2xl shadow-xl p-4 z-50 w-72 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
               <span className="font-bold text-xs text-foreground">
-                {isLogin ? "Sign In to Account" : "Register Account"}
+                {isLogin || !registrationAvailable ? "Sign In to Account" : "Register Account"}
               </span>
               <button
                 type="button"
@@ -132,20 +130,22 @@ const AuthBar = ({ user, username, loading, authEnabled, signIn, signUp, signOut
                 disabled={submitting}
                 className="w-full py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-95 disabled:opacity-50 transition-all shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isLogin ? <LogIn size={13} /> : <UserPlus size={13} />}
-                {submitting ? "Authenticating..." : isLogin ? "Login" : "Register"}
+                {isLogin || !registrationAvailable ? <LogIn size={13} /> : <UserPlus size={13} />}
+                {submitting ? "Authenticating..." : isLogin || !registrationAvailable ? "Login" : "Register"}
               </button>
             </form>
 
-            <div className="pt-2 border-t border-border/40 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-xs text-muted-foreground hover:text-foreground underline decoration-dotted underline-offset-2"
-              >
-                {isLogin ? "Need an account? Register" : "Already have an account? Login"}
-              </button>
-            </div>
+            {registrationAvailable && (
+              <div className="pt-2 border-t border-border/40 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-xs text-muted-foreground hover:text-foreground underline decoration-dotted underline-offset-2"
+                >
+                  {isLogin ? "Need an account? Register" : "Already have an account? Login"}
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

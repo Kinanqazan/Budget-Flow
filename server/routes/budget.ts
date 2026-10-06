@@ -24,7 +24,7 @@ export async function budgetRoutes(app: FastifyInstance) {
     if (!row) {
       return reply.send({
         finance_data: null,
-        dark_mode: false,
+        dark_mode: true,
         currency: "€",
       });
     }

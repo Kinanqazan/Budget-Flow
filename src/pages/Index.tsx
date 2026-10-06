@@ -3,15 +3,18 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { useAuth } from "@/hooks/useAuth";
 import FinanceSidebar from "@/components/finance/FinanceSidebar";
 import SankeyChart from "@/components/finance/SankeyChart";
+import MobileAllocation from "@/components/finance/MobileAllocation";
 import AuthBar from "@/components/finance/AuthBar";
-import { ChevronRight, Split, PieChart, Table, Settings, BarChart3 } from "lucide-react";
+import AuthPage from "@/components/finance/AuthPage";
+import { ChevronRight, Split, PieChart, Table, BarChart3 } from "lucide-react";
 import DonutChart from "@/components/finance/DonutChart";
 import FinanceTable from "@/components/finance/FinanceTable";
 import AnalysisPanel from "@/components/finance/AnalysisPanel";
 import SettingsPanel from "@/components/finance/SettingsPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
-  const { user, loading: authLoading, username, authEnabled, signIn, signUp, signOut, deleteAccount } = useAuth();
+  const { user, loading: authLoading, username, authEnabled, registrationAvailable, signIn, signUp, signOut, deleteAccount } = useAuth();
 
   const {
     data, stats, darkMode, setDarkMode, currency, setCurrency, currencies, loading,
@@ -27,12 +30,27 @@ const Index = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showPercent, setShowPercent] = useState(false);
-  const [mobileFlowZoom, setMobileFlowZoom] = useState(1.5);
   const [chartType, setChartType] = useState<"sankey" | "donut" | "table" | "analyses" | "settings">("sankey");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  if (authLoading) {
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-background text-muted-foreground">
+        <div role="status" className="flex items-center gap-3 text-sm">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden="true" />
+          Checking sign-in status…
+        </div>
+      </main>
+    );
+  }
+
+  if (authEnabled && !user) {
+    return <AuthPage registrationAvailable={registrationAvailable} signIn={signIn} signUp={signUp} />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden relative">
@@ -120,26 +138,17 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Settings + Profile Bar Frame */}
-            <div className="flex items-center bg-background md:bg-card border border-border rounded-xl h-11 px-1 gap-1.5 relative">
-              <button
-                onClick={() => setChartType("settings")}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${chartType === "settings" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
-                title="Settings"
-              >
-                <Settings size={16} />
-              </button>
-              
-              <div className="h-4 w-[1px] bg-border/80" />
-
+            {/* Profile opens settings */}
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background md:bg-card">
               <AuthBar
                 user={user}
                 username={username}
                 loading={authLoading}
                 authEnabled={authEnabled}
+                registrationAvailable={registrationAvailable}
+                onOpenSettings={() => setChartType("settings")}
                 signIn={signIn}
                 signUp={signUp}
-                signOut={signOut}
               />
             </div>
           </div>
@@ -148,34 +157,6 @@ const Index = () => {
         <div className={`relative flex-1 ${chartType === "table" ? "p-1" : "p-4"} flex flex-col min-h-0 overflow-y-auto`}>
           {(chartType === "sankey" || chartType === "donut") && (
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-              {chartType === "sankey" && (
-                <div className="flex items-center bg-background/95 border border-border rounded-xl overflow-hidden h-10 shadow-sm md:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setMobileFlowZoom((zoom) => Math.max(1, zoom - 0.25))}
-                    className="flex h-10 w-10 items-center justify-center text-lg font-bold text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Zoom out flow chart"
-                  >
-                    −
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileFlowZoom(1.5)}
-                    className="min-w-14 px-2 text-sm font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Reset flow chart zoom"
-                  >
-                    {Math.round(mobileFlowZoom * 100)}%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileFlowZoom((zoom) => Math.min(2, zoom + 0.25))}
-                    className="flex h-10 w-10 items-center justify-center text-lg font-bold text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="Zoom in flow chart"
-                  >
-                    +
-                  </button>
-                </div>
-              )}
               <div className="flex items-center bg-background/95 border border-border rounded-xl overflow-hidden h-10 shadow-sm">
               <button
                 onClick={() => setShowPercent(false)}
@@ -196,7 +177,11 @@ const Index = () => {
           )}
 
           {chartType === "sankey" ? (
-            <SankeyChart data={data} stats={stats} showPercent={showPercent} currency={currency} mobileZoom={mobileFlowZoom} />
+            isMobile ? (
+              <MobileAllocation data={data} stats={stats} showPercent={showPercent} currency={currency} />
+            ) : (
+              <SankeyChart data={data} stats={stats} showPercent={showPercent} currency={currency} />
+            )
           ) : chartType === "donut" ? (
             <DonutChart data={data} stats={stats} currency={currency} showPercent={showPercent} />
           ) : chartType === "table" ? (
@@ -227,6 +212,7 @@ const Index = () => {
               username={username}
               authEnabled={authEnabled}
               user={user}
+              signOut={signOut}
               deleteAccount={deleteAccount}
             />
           )}

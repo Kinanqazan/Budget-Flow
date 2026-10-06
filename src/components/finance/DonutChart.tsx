@@ -117,17 +117,45 @@ const getCategoryItemColor = (catColor: string, itemIndex: number, totalItems: n
   return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
 };
 
+const getDonutLabelColor = (backgroundColor: string) => {
+  let hex = backgroundColor.replace(/^#/, "");
+  if (hex.length === 3) hex = hex.split("").map((value) => value + value).join("");
+  if (hex.length === 8) hex = hex.slice(0, 6);
+  if (!/^[\da-f]{6}$/i.test(hex)) return "hsl(var(--foreground))";
+
+  const [r, g, b] = [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255);
+  const linearize = (channel: number) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  const luminance = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
+  const darkContrast = (luminance + 0.05) / 0.05;
+  const lightContrast = 1.05 / (luminance + 0.05);
+
+  return darkContrast >= lightContrast ? "#111827" : "#FFFFFF";
+};
+
 export default function DonutChart({ data, stats, currency = "€", showPercent = false }: Props) {
   const isMobile = useIsMobile();
-  const { segments, total, centerText, centerLabel, isOverspending } = useMemo(() => {
+  const { segments, mobileSegments, total, centerText, centerLabel, isOverspending } = useMemo(() => {
     const fmt = (v: number) => Math.round(v).toLocaleString("en-US") + " " + currency;
 
     // Flatten all items from all categories
     const allItems: { id: string; name: string; value: number; color: string; catName: string }[] = [];
+    const categoryTotals: { id: string; name: string; value: number; color: string }[] = [];
     let totalExpenses = 0;
 
     stats.cats.forEach((cat) => {
       const visItems = cat.items.filter((item) => item.value > 0);
+      const categoryTotal = visItems.reduce((sum, item) => sum + item.value, 0);
+
+      if (categoryTotal > 0) {
+        categoryTotals.push({
+          id: cat.id,
+          name: cat.name,
+          value: categoryTotal,
+          color: cat.color,
+        });
+      }
+
       visItems.forEach((item, itemIdx) => {
         allItems.push({
           id: item.id,
@@ -146,39 +174,66 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
     // Total for normalization - use actual total expenses so chart always fits 360°
     const totalForChart = totalExpenses + Math.max(0, remaining);
 
-    let currentAngle = -90; // Start from top
-    const segments = allItems.map((item) => {
-      const angle = totalForChart > 0 ? (item.value / totalForChart) * 360 : 0;
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + angle;
-      currentAngle += angle;
+    const createSegments = (
+      items: { id: string; name: string; value: number; color: string; catName?: string }[],
+    ) => {
+      let currentAngle = -90; // Start from top
+      const chartSegments = items.map((item) => {
+        const angle = totalForChart > 0 ? (item.value / totalForChart) * 360 : 0;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + angle;
+        currentAngle += angle;
 
-      return {
-        id: item.id,
-        name: item.name,
-        catName: item.catName,
-        color: item.color,
-        total: item.value,
-        startAngle,
-        endAngle,
-        percentage: totalForChart > 0 ? Math.round((item.value / totalForChart) * 100) : 0,
-      };
-    });
+        return {
+          id: item.id,
+          name: item.name,
+          catName: item.catName || "",
+          color: item.color,
+          total: item.value,
+          startAngle,
+          endAngle,
+          percentage: totalForChart > 0 ? Math.round((item.value / totalForChart) * 100) : 0,
+        };
+      });
 
-    // Add remaining segment if surplus (remaining > 0)
-    if (remaining > 0.01) {
-      const angle = (remaining / totalForChart) * 360;
-      segments.push({
-        id: "_remaining",
-        name: "Remaining",
+      // Add remaining segment if surplus (remaining > 0)
+      if (remaining > 0.01) {
+        const angle = (remaining / totalForChart) * 360;
+        chartSegments.push({
+          id: "_remaining",
+          name: "Remaining",
+          catName: "",
+          color: data.remainingColor || "#4DB6AC",
+          total: remaining,
+          startAngle: currentAngle,
+          endAngle: currentAngle + angle,
+          percentage: Math.round((remaining / totalForChart) * 100),
+        });
+      }
+
+      return chartSegments;
+    };
+
+    const segments = createSegments(allItems);
+    const sortedCategories = [...categoryTotals].sort((a, b) => b.value - a.value);
+    const mainCategories = sortedCategories.slice(0, 4);
+    const otherTotal = sortedCategories.slice(4).reduce((sum, category) => sum + category.value, 0);
+    const mobileItems = mainCategories.map((category) => ({
+      ...category,
+      catName: "",
+    }));
+
+    if (otherTotal > 0) {
+      mobileItems.push({
+        id: "_other",
+        name: "Other",
+        value: otherTotal,
+        color: "hsl(var(--muted-foreground))",
         catName: "",
-        color: data.remainingColor || "#4DB6AC",
-        total: remaining,
-        startAngle: currentAngle,
-        endAngle: currentAngle + angle,
-        percentage: Math.round((remaining / totalForChart) * 100),
       });
     }
+
+    const mobileSegments = createSegments(mobileItems);
 
     const centerText = isOverspending
       ? (showPercent
@@ -192,6 +247,7 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
 
     return {
       segments,
+      mobileSegments,
       total: stats.income,
       isOverspending,
       centerText,
@@ -245,9 +301,22 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
     );
   }
 
+  const chartSegments = isMobile ? mobileSegments : segments;
+  const formatMobileValue = (segment: (typeof mobileSegments)[number]) =>
+    showPercent
+      ? `${segment.percentage}%`
+      : `${new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(segment.total)} ${currency}`;
+
+  const getMobileLabelRotation = (midAngle: number) => {
+    let rotation = midAngle + 90;
+    while (rotation > 90) rotation -= 180;
+    while (rotation < -90) rotation += 180;
+    return rotation;
+  };
+
   return (
     <div className="w-full h-full flex flex-col md:flex-row items-center justify-center gap-6 overflow-y-auto p-2 md:p-4">
-      <div className="w-full max-w-[300px] md:max-w-[680px] aspect-square flex items-center justify-center shrink-0">
+      <div className="w-full max-w-[360px] md:max-w-[680px] aspect-square flex items-center justify-center shrink-0">
         <svg
           viewBox={isMobile ? "160 160 480 480" : `0 0 ${size} ${size}`}
           className="w-full h-full"
@@ -264,7 +333,7 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
           />
 
           {/* Segments */}
-          {segments.map((seg) => (
+          {chartSegments.map((seg) => (
             <g key={seg.id}>
               <path
                 d={createArcPath(
@@ -350,26 +419,48 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
               </g>
             );
           })}
+
+          {isMobile && mobileSegments.map((seg) => {
+            const midAngle = (seg.startAngle + seg.endAngle) / 2;
+            const angle = seg.endAngle - seg.startAngle;
+            const label = formatMobileValue(seg);
+            const labelWidth = label.length * 8;
+            const minAngle = ((labelWidth + 12) / 185) * (180 / Math.PI);
+
+            // Leave narrow slices uncluttered; the category key below still names them.
+            if (angle < minAngle) return null;
+
+            const position = polarToCartesian(center, center, 185, midAngle);
+            const rotation = getMobileLabelRotation(midAngle);
+
+            return (
+              <g key={`mobile-label-${seg.id}`} aria-label={`${seg.name}: ${label}`}>
+                <text
+                  x={position.x}
+                  y={position.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  transform={`rotate(${rotation}, ${position.x}, ${position.y})`}
+                  fill={getDonutLabelColor(seg.color)}
+                  fontSize="18"
+                  fontWeight="700"
+                  fontFamily="'Space Grotesk', sans-serif"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
 
-      {/* HTML Legend - visible on mobile screens below the chart */}
+      {/* Compact category key for mobile */}
       {isMobile && (
-        <div className="w-full space-y-2 border-t border-border/40 pt-4 px-0 md:px-2 max-h-[360px] overflow-y-auto scrollbar-thin">
-          {segments.map((seg) => (
-            <div key={seg.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border/10 last:border-b-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color, opacity: 0.8 }} />
-                <span className="font-semibold text-foreground truncate">{seg.name}</span>
-                {seg.catName && (
-                  <span className="text-[10px] text-muted-foreground truncate">({seg.catName})</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 font-display font-medium text-foreground flex-shrink-0">
-                <span>{seg.percentage}%</span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="font-mono">{seg.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}</span>
-              </div>
+        <div className="flex w-full max-w-[360px] flex-col items-center gap-2 border-t border-border/40 px-3 pt-4">
+          {mobileSegments.map((seg) => (
+            <div key={seg.id} className="flex min-h-9 min-w-0 items-center justify-center gap-3 text-sm">
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: seg.color, opacity: 0.9 }} />
+              <span className="truncate font-semibold text-foreground">{seg.name}</span>
             </div>
           ))}
         </div>

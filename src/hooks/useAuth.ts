@@ -7,10 +7,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string>("");
   const [authEnabled, setAuthEnabled] = useState(true);
+  const [registrationAvailable, setRegistrationAvailable] = useState(false);
 
   useEffect(() => {
     api.auth.setupStatus().then((status) => {
       setAuthEnabled(status.authEnabled);
+      setRegistrationAvailable(status.authEnabled && status.needsSetup);
 
       if (!status.authEnabled) {
         setUser({ id: "default", username: "admin" });
@@ -58,8 +60,12 @@ export function useAuth() {
       api.setToken(token);
       setUser(u);
       setUsername(u.username);
+      setRegistrationAvailable(false);
       return { error: null };
     } catch (e: any) {
+      api.auth.setupStatus().then((status) => {
+        setRegistrationAvailable(status.authEnabled && status.needsSetup);
+      }).catch(() => {});
       return { error: e };
     }
   };
@@ -75,7 +81,13 @@ export function useAuth() {
     api.clearToken();
     setUser(null);
     setUsername("");
+    try {
+      const status = await api.auth.setupStatus();
+      setRegistrationAvailable(status.authEnabled && status.needsSetup);
+    } catch {
+      setRegistrationAvailable(false);
+    }
   };
 
-  return { user, loading, username, authEnabled, signIn, signUp, signOut, deleteAccount };
+  return { user, loading, username, authEnabled, registrationAvailable, signIn, signUp, signOut, deleteAccount };
 }

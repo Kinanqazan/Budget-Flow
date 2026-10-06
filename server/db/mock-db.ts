@@ -117,7 +117,9 @@ export class MockDatabase {
           return { count: this.state.users.length };
         }
 
-        if (/INSERT\s+INTO\s+users\s+\(username,\s+password_hash\)\s+VALUES\s+\(\?,\s+\?\)\s+RETURNING\s+id/i.test(sanitized)) {
+        if (/INSERT\s+INTO\s+users\s+\(username,\s+password_hash\)\s+SELECT\s+\?,\s+\?\s+WHERE\s+NOT\s+EXISTS\s+\(SELECT\s+1\s+FROM\s+users\)\s+RETURNING\s+id/i.test(sanitized)) {
+          if (this.state.users.length > 0) return undefined;
+
           const username = params[0] as string;
           const passwordHash = params[1] as string;
 

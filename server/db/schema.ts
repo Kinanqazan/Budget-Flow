@@ -43,7 +43,7 @@ export function initDB(): DatabaseClient {
       id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
       user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       finance_data TEXT NOT NULL DEFAULT '{}',
-      dark_mode INTEGER DEFAULT 0,
+      dark_mode INTEGER DEFAULT 1,
       currency TEXT DEFAULT '€',
       updated_at TEXT DEFAULT (datetime('now'))
     );

@@ -29,7 +29,8 @@
 
 ### Data Management
 - Local SQLite database (self-hosted)
-- Optional authentication for multi-user access
+- Single account per self-hosted installation
+- Login required by default in Docker deployments; local preview remains available with authentication disabled
 - JSON Export/Import for backups
 
 ---
@@ -60,7 +61,7 @@ The recommended way to run BudgetFlow is using Docker Compose. Since the project
          - HOST=0.0.0.0
          - DATA_DIR=/app/data
          - JWT_SECRET=your-secure-random-string # Generate a long secure secret for login security
-         - AUTH_ENABLED=true                     # Set to false to disable logins completely
+         - AUTH_ENABLED=true                     # Keep true for deployed instances
        restart: unless-stopped
 
    volumes:
@@ -72,7 +73,7 @@ The recommended way to run BudgetFlow is using Docker Compose. Since the project
    docker compose up -d
    ```
 
-4. Open your web browser and go to `http://<YOUR_SERVER_IP>:3000`. If `AUTH_ENABLED` is set to `true`, the app will guide you through setting up your administrator account.
+4. Open your web browser and go to `http://<YOUR_SERVER_IP>:3000`. The first visit guides you through creating the single account for this instance. Later visits require signing in before showing your budget.
 
 ---
 
@@ -85,7 +86,7 @@ The recommended way to run BudgetFlow is using Docker Compose. Since the project
 | `DATA_DIR` | `/app/data` | Directory where the SQLite database is stored |
 | `JWT_SECRET` | - | Secret key used to sign session tokens. Automatically generated at startup if missing. |
 | `JWT_EXPIRES_IN` | `7d` | Token expiration time |
-| `AUTH_ENABLED` | `true` | Enable/disable authentication. If set to `false`, users bypass logins and use a default administrator account. |
+| `AUTH_ENABLED` | `true` in Docker | Enable/disable authentication. Docker images enable it by default. Set it to `false` only for a trusted local preview without sign-in. |
 | `LOG_LEVEL` | `info` | Server log level (`debug`, `info`, `warn`, `error`) |
 
 ---

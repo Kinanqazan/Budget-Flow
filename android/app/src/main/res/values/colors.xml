@@ -1,0 +1,6 @@
+<resources>
+    <color name="colorPrimary">#0F1220</color>
+    <color name="colorPrimaryDark">#0F1220</color>
+    <color name="launcherBackground">#3B82F6</color>
+    <color name="launcherForeground">#FFFFFFFF</color>
+</resources>

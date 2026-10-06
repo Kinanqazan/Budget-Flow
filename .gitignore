@@ -20,6 +20,13 @@ dist-ssr
 data/
 server/dist/
 
+# Android APK build outputs and signing material
+android/.gradle/
+android/local.properties
+android/app/build/
+android/budgetflow-release.jks
+android/keystore.properties
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

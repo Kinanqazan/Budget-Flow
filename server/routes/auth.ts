@@ -28,13 +28,24 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Username must be 2-30 characters" });
     }
 
+    const db = getDB();
+    const existingUsers = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    if (existingUsers.count > 0) {
+      return reply.status(409).send({ error: "This app allows one account. Registration is closed." });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const db = getDB();
     try {
       const row = db.prepare(
-        "INSERT INTO users (username, password_hash) VALUES (?, ?) RETURNING id"
-      ).get(username, passwordHash) as { id: string };
+        `INSERT INTO users (username, password_hash)
+         SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM users)
+         RETURNING id`
+      ).get(username, passwordHash) as { id: string } | undefined;
+
+      if (!row) {
+        return reply.status(409).send({ error: "This app allows one account. Registration is closed." });
+      }
 
       const token = app.jwt.sign({ userId: row.id, username });
 

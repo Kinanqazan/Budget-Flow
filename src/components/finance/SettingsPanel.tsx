@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { 
   Sun, Moon, Globe, Shield, Save, 
-  Download, Upload, Check, Info, Trash2
+  Download, Upload, Check, LogOut, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ApiUser } from "@/types/api";
@@ -34,6 +34,7 @@ interface Props {
   username: string | null;
   authEnabled: boolean;
   user: ApiUser | null;
+  signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
 
@@ -54,6 +55,7 @@ export default function SettingsPanel({
   username,
   authEnabled,
   user,
+  signOut,
   deleteAccount,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,9 +91,34 @@ export default function SettingsPanel({
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6 p-2 select-none">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-foreground">App Settings</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Customize your workspace and manage your finance data</p>
+        {authEnabled && user && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center justify-center gap-2 py-2 px-3 bg-background text-foreground border border-border rounded-xl text-xs font-semibold hover:bg-accent transition-all shrink-0"
+              >
+                <LogOut size={14} /> Sign out
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sign out?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to sign out of {username}&apos;s account?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void signOut()}>
+                  Sign out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -326,14 +353,6 @@ export default function SettingsPanel({
         )}
       </div>
 
-      {/* Info Tips Banner */}
-      <div className="bg-muted/30 border border-border/50 rounded-2xl p-4 flex items-start gap-3 text-muted-foreground text-xs leading-relaxed">
-        <Info className="text-primary shrink-0 mt-0.5" size={16} />
-        <div>
-          <span className="font-bold block text-foreground mb-0.5">Auto-Save Feature</span>
-          By default, changes are automatically saved to your local cache. If you are signed in, they will automatically sync to our servers within 2 seconds of any edit. You can use the data management tools above to perform manual backups.
-        </div>
-      </div>
     </div>
   );
 }
