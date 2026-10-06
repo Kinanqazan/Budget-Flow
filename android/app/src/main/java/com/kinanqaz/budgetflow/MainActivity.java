@@ -33,6 +33,13 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String savedServer = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString(PREF_SERVER_URL, "");
+        if (savedServer != null && !savedServer.trim().isEmpty()) {
+            launchWebActivity(savedServer);
+            return;
+        }
+
         configureSystemBars();
         setContentView(createContent());
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
@@ -156,7 +163,12 @@ public final class MainActivity extends Activity {
                 .putString(PREF_SERVER_URL, normalized)
                 .apply();
 
-        startActivity(new Intent(this, WebActivity.class).putExtra(WebActivity.EXTRA_URL, normalized));
+        launchWebActivity(normalized);
+    }
+
+    private void launchWebActivity(String serverUrl) {
+        startActivity(new Intent(this, WebActivity.class).putExtra(WebActivity.EXTRA_URL, serverUrl));
+        finish();
     }
 
     private void showError(String message) {

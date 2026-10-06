@@ -65,7 +65,7 @@ const Index = () => {
       <div
         className={`transition-all duration-300 ease-in-out ${
           sidebarOpen
-            ? "w-[300px] min-w-[300px] md:relative fixed inset-y-0 left-0 z-50 shadow-2xl md:shadow-none" 
+            ? "w-[280px] min-w-[280px] md:relative fixed inset-y-0 left-0 z-50 shadow-2xl md:shadow-none"
             : "w-0 min-w-0 md:relative fixed inset-y-0 left-0"
         } overflow-hidden`}
       >

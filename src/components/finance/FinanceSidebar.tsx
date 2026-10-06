@@ -37,7 +37,7 @@ export default function FinanceSidebar({
     .sort((a, b) => Number(a.type === "investment") - Number(b.type === "investment"));
 
   return (
-    <aside className="w-[300px] min-w-[300px] bg-muted/30 flex flex-col h-screen border-r border-border/60">
+    <aside className="w-[280px] min-w-[280px] bg-background flex flex-col h-screen border-r border-border/60">
       {/* Header / Logo */}
       <div className="px-5 py-4 border-b border-border/60">
         <div className="flex items-center gap-2.5">

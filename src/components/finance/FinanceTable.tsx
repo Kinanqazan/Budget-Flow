@@ -611,8 +611,8 @@ export default function FinanceTable({
                           return (
                             <td
                               key={col}
-                              style={{ borderLeftColor: withAlpha(fi.categoryColor, colorRows ? 0.5 : 0.38), width, maxWidth: width }}
-                              className="py-1.5 px-4 border-l border-l-transparent transition-all overflow-visible"
+                              style={{ width, maxWidth: width }}
+                              className="py-1.5 px-4 overflow-visible"
                               title={`Category: ${fi.categoryName}`}
                             >
                               <div className="flex items-center gap-1.5 w-full">
