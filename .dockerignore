@@ -6,3 +6,6 @@ dist
 .env
 kilo.json
 .kilo
+.toolchain
+integrations
+__pycache__

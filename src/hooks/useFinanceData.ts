@@ -1,7 +1,9 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { FinanceData, Stats, ExpenseItem, CategoryType } from "@/types/finance";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { useBudgetSync } from "./useBudgetSync";
+import { calculateStats } from "../../server/finance";
+import type { ApiBudgetData } from "@/types/api";
 
 const STORAGE_KEY = "budgetflow-data";
 const CURRENCY_KEY = "budgetflow-currency";
@@ -63,11 +65,6 @@ function loadCurrency(): string {
   return "€";
 }
 
-function hasMeaningfulFinanceData(fd: FinanceData): boolean {
-  if (!fd.categories || fd.categories.length === 0) return false;
-  return fd.income?.some((i) => (i.value || 0) > 0) ?? false;
-}
-
 const parseCSVLine = (line: string): string[] => {
   const result: string[] = [];
   let current = '';
@@ -113,91 +110,34 @@ const formatDateForDisplay = (isoStr?: string): string => {
 };
 
 export function useFinanceData(userId: string | undefined, authenticated: boolean) {
-  const [data, setData] = useState<FinanceData>(loadFromStorage);
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains("dark"));
+  const [data, setDataState] = useState<FinanceData>(loadFromStorage);
+  const [darkMode, setDarkModeState] = useState(() => document.documentElement.classList.contains("dark"));
   const [currency, setCurrencyState] = useState<string>(loadCurrency);
   const [loading, setLoading] = useState(false);
-  const [serverReady, setServerReady] = useState(!authenticated);
-  const dataRef = useRef(data);
-  const darkModeRef = useRef(darkMode);
-  const currencyRef = useRef(currency);
-  const userIdRef = useRef(userId);
-
-  dataRef.current = data;
-  darkModeRef.current = darkMode;
-  currencyRef.current = currency;
-  userIdRef.current = userId;
-
-  const stats: Stats = useMemo(() => {
-    const income = Math.round(data.income.reduce((s, i) => s + (i.value || 0), 0));
-    const cats = data.categories.map((c) => ({
-      ...c,
-      total: Math.round(c.items.reduce((s, i) => s + (i.value || 0), 0)),
-    }));
-    const expenseCats = cats.filter((category) => category.type !== "investment");
-    const investmentCats = cats.filter((category) => category.type === "investment");
-    const expenses = expenseCats.reduce((s, c) => s + c.total, 0);
-    const investments = investmentCats.reduce((s, c) => s + c.total, 0);
-    return {
-      income,
-      cats,
-      expenseCats,
-      investmentCats,
-      expenses,
-      investments,
-      remaining: income - expenses - investments,
-    };
-  }, [data]);
-
-  const loadFromServer = useCallback(async () => {
-    if (!authenticated) return;
-    try {
-      const row = await api.budget.get();
-      if (row?.finance_data && hasMeaningfulFinanceData(row.finance_data)) {
-        setData(row.finance_data);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(row.finance_data));
-      } else if (!hasMeaningfulFinanceData(dataRef.current)) {
-        setData(defaultData);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultData));
-      }
-      if (row) {
-        setDarkMode(row.dark_mode);
-        document.documentElement.classList.toggle("dark", row.dark_mode);
-        if (row.currency) {
-          setCurrencyState(row.currency);
-          localStorage.setItem(CURRENCY_KEY, row.currency);
-        }
-      }
-    } catch {
-      // Server unavailable, use localStorage cache
+  const applySnapshot = useCallback((row: ApiBudgetData) => {
+    if (row.finance_data !== null) {
+      setDataState(row.finance_data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(row.finance_data));
     }
-  }, [authenticated]);
-
-  useEffect(() => {
-    if (!authenticated || !userId) {
-      setServerReady(true);
-      return;
-    }
-    setServerReady(false);
-    loadFromServer().finally(() => setServerReady(true));
-  }, [authenticated, userId, loadFromServer]);
-
-  const saveToServer = useCallback(async () => {
-    if (!userIdRef.current) return;
-    try {
-      await api.budget.save(dataRef.current, darkModeRef.current, currencyRef.current);
-    } catch (err) {
-      console.error("Auto-save failed:", err);
-    }
+    setDarkModeState(row.dark_mode);
+    document.documentElement.classList.toggle("dark", row.dark_mode);
+    setCurrencyState(row.currency);
+    localStorage.setItem(CURRENCY_KEY, row.currency);
   }, []);
-
-  useEffect(() => {
-    if (!userId || !serverReady) return;
-    const timer = setTimeout(() => {
-      saveToServer();
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [data, darkMode, currency, userId, serverReady, saveToServer]);
+  const { markEdited, save: saveSynced, refresh: loadFromServer, loadSavedBudget: reloadSaved, conflict: syncConflict } = useBudgetSync({ userId, enabled: authenticated,
+    draft: { finance_data: data, dark_mode: darkMode, currency }, apply: applySnapshot });
+  const setData = useCallback((value: React.SetStateAction<FinanceData>) => {
+    markEdited(); setDataState(value);
+  }, [markEdited]);
+  const setDarkMode = useCallback((value: React.SetStateAction<boolean>) => {
+    markEdited(); setDarkModeState(value);
+  }, [markEdited]);
+  const stats: Stats = useMemo(() => calculateStats(data), [data]);
+  const loadSavedBudget = useCallback(async () => {
+    try { await reloadSaved(); } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load saved budget");
+    }
+  }, [reloadSaved]);
 
   const updateIncome = useCallback((index: number, field: "name" | "value", val: string | number) => {
     setData((d) => {
@@ -205,15 +145,15 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       income[index] = { ...income[index], [field]: field === "value" ? +val || 0 : val };
       return { ...d, income };
     });
-  }, []);
+  }, [setData]);
 
   const addIncome = useCallback(() => {
     setData((d) => ({ ...d, income: [...d.income, { id: uid(), name: "New", value: 0 }] }));
-  }, []);
+  }, [setData]);
 
   const removeIncome = useCallback((index: number) => {
     setData((d) => ({ ...d, income: d.income.filter((_, i) => i !== index) }));
-  }, []);
+  }, [setData]);
 
   const updateCategory = useCallback((ci: number, field: "name" | "color" | "type", val: string) => {
     setData((d) => {
@@ -221,7 +161,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       categories[ci] = { ...categories[ci], [field]: val };
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const addCategory = useCallback((type: CategoryType = "expense") => {
     const colors = ["#FF8B7B", "#FFE066", "#4DB6AC", "#64B5F6", "#CE93D8", "#FFCC80", "#EF9A9A", "#A5D6A7"];
@@ -232,11 +172,11 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
         { id: uid(), name: type === "investment" ? "New Investment" : "New Category", color: colors[d.categories.length % colors.length], type, items: [] },
       ],
     }));
-  }, []);
+  }, [setData]);
 
   const removeCategory = useCallback((ci: number) => {
     setData((d) => ({ ...d, categories: d.categories.filter((_, i) => i !== ci) }));
-  }, []);
+  }, [setData]);
   const updateItem = useCallback((ci: number, ii: number, field: keyof ExpenseItem, val: string | number | undefined) => {
     setData((d) => {
       const categories = [...d.categories];
@@ -245,7 +185,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       categories[ci] = { ...categories[ci], items };
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
   const moveItemCategory = useCallback((sourceCi: number, ii: number, targetCi: number) => {
     setData((d) => {
       const categories = [...d.categories];
@@ -266,7 +206,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
 
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const addItem = useCallback((ci: number) => {
     setData((d) => {
@@ -285,7 +225,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       };
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const removeItem = useCallback((ci: number, ii: number) => {
     setData((d) => {
@@ -293,7 +233,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       categories[ci] = { ...categories[ci], items: categories[ci].items.filter((_, i) => i !== ii) };
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const moveIncome = useCallback((fromIndex: number, toIndex: number) => {
     setData((d) => {
@@ -303,7 +243,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       income.splice(toIndex, 0, moved);
       return { ...d, income };
     });
-  }, []);
+  }, [setData]);
 
   const moveCategory = useCallback((fromIndex: number, toIndex: number) => {
     setData((d) => {
@@ -313,7 +253,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       categories.splice(toIndex, 0, moved);
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const moveItem = useCallback((ci: number, fromIndex: number, toIndex: number) => {
     setData((d) => {
@@ -325,7 +265,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       categories[ci] = { ...categories[ci], items };
       return { ...d, categories };
     });
-  }, []);
+  }, [setData]);
 
   const saveToJson = useCallback(() => {
     const exportData = {
@@ -347,17 +287,18 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
   }, [data, currency, darkMode]);
 
   const setCurrencyAndSave = useCallback((c: string) => {
+    markEdited();
     setCurrencyState(c);
     localStorage.setItem(CURRENCY_KEY, c);
-  }, []);
+  }, [markEdited]);
 
   const updateRemainingColor = useCallback((color: string) => {
     setData((d) => ({ ...d, remainingColor: color }));
-  }, []);
+  }, [setData]);
 
   const updateIncomeColor = useCallback((color: string) => {
     setData((d) => ({ ...d, incomeColor: color }));
-  }, []);
+  }, [setData]);
 
   const importFromJson = useCallback((file: File) => {
     const reader = new FileReader();
@@ -379,7 +320,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       }
     };
     reader.readAsText(file);
-  }, [setCurrencyAndSave]);
+  }, [setCurrencyAndSave, setData]);
 
   const exportToCsv = useCallback(() => {
     const headers = ["Name", "Amount", "Category", "Date Range", "Infos", "Cancellation Date", "Billing Period"];
@@ -495,7 +436,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
     });
 
     toast.success(`Successfully imported ${importedItems.length} expenses!`);
-  }, []);
+  }, [setData]);
 
   const save = useCallback(async () => {
     setLoading(true);
@@ -504,7 +445,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
       localStorage.setItem(CURRENCY_KEY, currency);
 
       if (userId) {
-        await api.budget.save(data, darkMode, currency);
+        await saveSynced();
       }
 
       toast.success(userId ? "Saved to server!" : "Saved locally!");
@@ -514,7 +455,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
     } finally {
       setLoading(false);
     }
-  }, [data, darkMode, currency, userId]);
+  }, [data, currency, userId, saveSynced]);
 
   return {
     data, setData, stats, darkMode, setDarkMode, currency, setCurrency: setCurrencyAndSave, currencies: defaultCurrencies, loading,
@@ -525,6 +466,6 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
     updateIncomeColor,
     importFromCsv,
     exportToCsv,
-    save, saveToJson, importFromJson, loadFromServer,
+    save, saveToJson, importFromJson, loadFromServer, loadSavedBudget, syncConflict,
   };
 }

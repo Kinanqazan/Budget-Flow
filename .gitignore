@@ -40,3 +40,6 @@ android/keystore.properties
 
 # Claude
 .claude/
+.toolchain/
+__pycache__/
+.venv/

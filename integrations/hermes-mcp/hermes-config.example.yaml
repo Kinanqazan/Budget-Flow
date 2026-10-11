@@ -1,0 +1,15 @@
+# Merge this block into the config of the Hermes profile that runs your assistant.
+# Store the two variables in that profile's secret environment.
+mcp_servers:
+  budgetflow:
+    command: /opt/budgetflow-mcp/.venv/bin/python
+    args: [/opt/budgetflow-mcp/server.py]
+    env:
+      BUDGETFLOW_URL: "${BUDGETFLOW_URL}"
+      BUDGETFLOW_API_TOKEN: "${BUDGETFLOW_API_TOKEN}"
+    supports_parallel_tool_calls: false
+    sampling:
+      enabled: false
+    tools:
+      resources: false
+      prompts: false

@@ -15,7 +15,7 @@ const formatMoney = (value: number, currency: string) =>
 export default function MobileAllocation({
   data,
   stats,
-  showPercent = false,
+  showPercent = true,
   currency = "€",
 }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export default function MobileAllocation({
   const percentOfIncome = (value: number) =>
     stats.income > 0 ? `${Math.round((value / stats.income) * 100)}%` : "—";
   const formatValue = (value: number) =>
-    showPercent && stats.income > 0 ? percentOfIncome(value) : formatMoney(value, currency);
+    showPercent ? percentOfIncome(value) : formatMoney(value, currency);
 
   const summary = [
     { label: "Income", value: stats.income, tone: "text-foreground" },

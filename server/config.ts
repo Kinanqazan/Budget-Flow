@@ -24,5 +24,6 @@ export const config = {
   })(),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   AUTH_ENABLED: process.env.AUTH_ENABLED === "true",
+  ASSISTANT_API_TOKEN: process.env.ASSISTANT_API_TOKEN || "",
   LOG_LEVEL: process.env.LOG_LEVEL || "info",
 };

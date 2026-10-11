@@ -13,6 +13,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-please-change-this-secret}
       - AUTH_ENABLED=${AUTH_ENABLED:-true}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ASSISTANT_API_TOKEN=${ASSISTANT_API_TOKEN:-}
     restart: unless-stopped
 
 volumes:

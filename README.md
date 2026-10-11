@@ -129,6 +129,10 @@ cp .env.example .env
 npm run dev
 ```
 
+### Personal Hermes assistant
+
+BudgetFlow includes an optional local MCP adapter for reading budgets and creating, editing or deleting categories and entries. It uses a dedicated token and protects browser/assistant changes with revisions. Assistant access is disabled until configured. See [connection and verification instructions](integrations/hermes-mcp/README.md).
+
 ### Tech Stack
 
 | Technology | Purpose |

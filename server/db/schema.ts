@@ -45,6 +45,7 @@ export function initDB(): DatabaseClient {
       finance_data TEXT NOT NULL DEFAULT '{}',
       dark_mode INTEGER DEFAULT 1,
       currency TEXT DEFAULT '€',
+      revision INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -53,6 +54,8 @@ export function initDB(): DatabaseClient {
     );
     INSERT OR IGNORE INTO schema_version (version) VALUES (1);
   `);
+
+  migrateBudgetRevision(db);
 
   if (!config.AUTH_ENABLED) {
     db.prepare(`
@@ -67,4 +70,11 @@ export function initDB(): DatabaseClient {
 export function getDB(): DatabaseClient {
   if (!db) throw new Error("Database not initialized. Call initDB() first.");
   return db;
+}
+
+export function migrateBudgetRevision(database: DatabaseClient): void {
+  const columns = database.pragma("table_info(budget_data)") as { name: string }[] | undefined;
+  if (Array.isArray(columns) && !columns.some(column => column.name === "revision")) {
+    database.exec("ALTER TABLE budget_data ADD COLUMN revision INTEGER NOT NULL DEFAULT 0");
+  }
 }

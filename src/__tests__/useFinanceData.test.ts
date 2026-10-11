@@ -226,6 +226,7 @@ describe("useFinanceData", () => {
         finance_data: { income: [{ id: "i1", name: "Salary", value: 7000 }], categories: [{ id: "c1", name: "Housing", color: "#f00", items: [] }] },
         dark_mode: true,
         currency: "$",
+        revision: 1,
       });
 
       setLocalStorageData({ income: [], categories: [] });

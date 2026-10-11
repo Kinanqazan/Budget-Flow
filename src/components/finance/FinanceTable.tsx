@@ -16,6 +16,7 @@ interface Props {
   updateItem: (ci: number, ii: number, field: keyof ExpenseItem, val: string | number | undefined) => void;
   removeItem: (ci: number, ii: number) => void;
   currency: string;
+  showPercent?: boolean;
 }
 
 interface FlattenedItem {
@@ -191,6 +192,7 @@ export default function FinanceTable({
   updateItem,
   removeItem,
   currency,
+  showPercent = true,
 }: Props) {
   const isMobile = useIsMobile();
   const [activeDateEditorItemId, setActiveDateEditorItemId] = useState<string | null>(null);
@@ -209,6 +211,7 @@ export default function FinanceTable({
     "actions",
   ]);
   const [colWidths, setColWidths] = useState<Record<string, number>>(() => loadColumnWidths(TABLE_COLUMN_WIDTHS_KEY, defaultColumnWidths));
+  const visibleColumns = columns.filter((column) => !showPercent || (column !== "monthly" && column !== "annual"));
   const [mobileColWidths, setMobileColWidths] = useState<Record<string, number>>(() => loadColumnWidths(MOBILE_TABLE_COLUMN_WIDTHS_KEY, mobileColumnWidths));
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
   const [colorRows, setColorRows] = useState(() => {
@@ -445,7 +448,7 @@ export default function FinanceTable({
 
   const renderSectionTotal = (total: { monthly: number; annual: number }, label = "Total", emphasized = true) => (
     <tr className={`border-t ${emphasized ? "border-primary/40 bg-primary/5" : "border-border/70 bg-muted/20"} text-sm`}>
-      {columns.map((col) => {
+      {visibleColumns.map((col) => {
         const width = getColumnWidth(col);
         if (col === "name") {
           return <td key={col} style={{ width, maxWidth: width }} className={`px-4 py-2.5 ${emphasized ? "text-foreground" : "text-muted-foreground"}`}>{label}</td>;
@@ -492,12 +495,13 @@ export default function FinanceTable({
       <div className="flex-1 bg-card border-2 border-border/80 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-auto scrollbar-thin">
           <table
-            className="w-full text-left border-collapse min-w-[842px] [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-border/30 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-border/30"
-            style={{ tableLayout: "fixed" }}
+            className="w-full text-left border-collapse [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-border/30 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-border/30"
+            style={{ tableLayout: "fixed", minWidth: visibleColumns.reduce((total, column) => total + getColumnWidth(column), 0) }}
           >
             <thead className="sticky top-0 z-10 shadow-sm">
               <tr className="bg-card/95 backdrop-blur border-b border-border/70 text-xs uppercase font-bold text-muted-foreground tracking-wider select-none">
-                {columns.map((col, idx) => {
+                {visibleColumns.map((col) => {
+                  const idx = columns.indexOf(col);
                   const width = getColumnWidth(col);
                   let title = "";
                   let alignClass = "text-left";
@@ -512,6 +516,8 @@ export default function FinanceTable({
                   return (
                     <th
                       key={col}
+                      aria-label={col === "percentage" ? "Percentage of income" : undefined}
+                      title={col === "percentage" ? "Percentage of income" : undefined}
                       style={{ width }}
                       className={`py-3 px-4 uppercase font-bold text-muted-foreground tracking-wider select-none relative group/th ${alignClass}`}
                       draggable
@@ -548,7 +554,7 @@ export default function FinanceTable({
             <tbody className="divide-y divide-border/40 text-sm">
               {flattenedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="py-12 text-center text-muted-foreground font-medium">
+                  <td colSpan={visibleColumns.length} className="py-12 text-center text-muted-foreground font-medium">
                     No expense or investment items found. Import a CSV to get started.
                   </td>
                 </tr>
@@ -598,14 +604,14 @@ export default function FinanceTable({
                     <React.Fragment key={item.id}>
                     {startsSection && (
                       <tr aria-hidden="true">
-                        <td colSpan={columns.length} className="h-0.5 bg-border p-0" />
+                        <td colSpan={visibleColumns.length} className="h-0.5 bg-border p-0" />
                       </tr>
                     )}
                     <tr
                       className="even:bg-muted/10 hover:bg-accent/35 group transition-colors"
                       style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.12) } : undefined}
                     >
-                      {columns.map((col) => {
+                      {visibleColumns.map((col) => {
                         const width = getColumnWidth(col);
                         if (col === "name") {
                           return (

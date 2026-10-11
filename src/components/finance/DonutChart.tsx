@@ -133,7 +133,7 @@ const getDonutLabelColor = (backgroundColor: string) => {
   return darkContrast >= lightContrast ? "#111827" : "#FFFFFF";
 };
 
-export default function DonutChart({ data, stats, currency = "€", showPercent = false }: Props) {
+export default function DonutChart({ data, stats, currency = "€", showPercent = true }: Props) {
   const isMobile = useIsMobile();
   const { segments, mobileSegments, total, centerText, centerLabel, isOverspending } = useMemo(() => {
     const fmt = (v: number) => Math.round(v).toLocaleString("en-US") + " " + currency;

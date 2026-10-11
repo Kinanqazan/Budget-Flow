@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useAuth } from "@/hooks/useAuth";
 import FinanceSidebar from "@/components/finance/FinanceSidebar";
+import SwipeableSidebar from "@/components/finance/SwipeableSidebar";
 import SankeyChart from "@/components/finance/SankeyChart";
 import MobileAllocation from "@/components/finance/MobileAllocation";
 import AuthBar from "@/components/finance/AuthBar";
@@ -25,11 +26,10 @@ const Index = () => {
     updateIncomeColor,
     importFromCsv,
     exportToCsv,
-    save, saveToJson, importFromJson,
+    save, saveToJson, importFromJson, syncConflict, loadSavedBudget,
   } = useFinanceData(user?.id, !!user);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showPercent, setShowPercent] = useState(false);
+  const [showPercent, setShowPercent] = useState(true);
   const [chartType, setChartType] = useState<"sankey" | "donut" | "table" | "analyses" | "settings">("sankey");
   const isMobile = useIsMobile();
 
@@ -53,22 +53,7 @@ const Index = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden relative">
-      {/* Sidebar Overlay backdrop on mobile */}
-      {sidebarOpen && (
-        <div 
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
-        />
-      )}
-
-      <div
-        className={`transition-all duration-300 ease-in-out ${
-          sidebarOpen
-            ? "w-[280px] min-w-[280px] md:relative fixed inset-y-0 left-0 z-50 shadow-2xl md:shadow-none"
-            : "w-0 min-w-0 md:relative fixed inset-y-0 left-0"
-        } overflow-hidden`}
-      >
+    <SwipeableSidebar sidebar={(close) => (
         <FinanceSidebar
           data={data}
           updateIncome={updateIncome}
@@ -84,20 +69,31 @@ const Index = () => {
           removeItem={removeItem}
           moveItem={moveItem}
           updateIncomeColor={updateIncomeColor}
-          onClose={() => setSidebarOpen(false)}
+          onClose={close}
         />
-      </div>
-
+    )}>
+      {({ open, isOpen: sidebarOpen }) => (
       <main className={`flex-1 overflow-auto p-4 flex flex-col min-w-0 ${chartType === "analyses" ? "scrollbar-hidden" : ""}`}>
+        {syncConflict && (
+          <div role="alert" className="mb-3 rounded-lg border border-border bg-card p-3 text-sm">
+            <p>Changes could not be saved or confirmed. Your unsaved edits are kept here. Loading the saved budget replaces them.</p>
+            <div className="mt-2 flex gap-3">
+              <button className="underline" onClick={saveToJson}>Export my edits</button>
+              <button className="underline" onClick={loadSavedBudget}>Load saved budget</button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2.5 mb-4 select-none w-full flex-nowrap">
           {/* Left: Sidebar Toggle */}
           <div className="flex items-center gap-1.5 shrink-0">
             {!sidebarOpen && (
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={open}
                 className="flex h-8 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
                 title="Open sidebar"
                 aria-label="Open sidebar"
+                aria-controls="finance-sidebar"
+                aria-expanded={sidebarOpen}
               >
                 <ChevronRight size={18} />
               </button>
@@ -132,11 +128,28 @@ const Index = () => {
               <button
                 onClick={() => setChartType("analyses")}
                 className={`flex-1 md:px-3.5 h-full flex items-center justify-center transition-colors ${chartType === "analyses" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                title="Analyses"
+                title="Analysis"
               >
                 <BarChart3 size={16} />
               </button>
             </div>
+
+            {chartType !== "settings" && (
+              <div className="flex h-11 shrink-0 items-center overflow-hidden rounded-xl border border-border bg-background md:bg-card" role="group" aria-label="Value display">
+                <button
+                  onClick={() => setShowPercent(true)}
+                  className={`h-full px-3 text-xs font-semibold transition-colors ${showPercent ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  aria-label="Show percentages"
+                  aria-pressed={showPercent}
+                >%</button>
+                <button
+                  onClick={() => setShowPercent(false)}
+                  className={`h-full px-3 text-xs font-semibold transition-colors ${!showPercent ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  aria-label={`Show values in ${currency}`}
+                  aria-pressed={!showPercent}
+                >{currency}</button>
+              </div>
+            )}
 
             {/* Profile opens settings */}
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-background md:bg-card">
@@ -155,27 +168,6 @@ const Index = () => {
         </div>
 
         <div className={`relative flex-1 ${chartType === "table" ? "p-1" : "p-4"} flex flex-col min-h-0 overflow-y-auto`}>
-          {(chartType === "sankey" || chartType === "donut") && (
-            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-              <div className="flex items-center bg-background/95 border border-border rounded-xl overflow-hidden h-10 shadow-sm">
-              <button
-                onClick={() => setShowPercent(false)}
-                className={`px-3 text-xs font-semibold h-full transition-colors ${!showPercent ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                aria-label={`Show values in ${currency}`}
-              >
-                {currency}
-              </button>
-              <button
-                onClick={() => setShowPercent(true)}
-                className={`px-3.5 text-xs font-semibold h-full transition-colors ${showPercent ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                aria-label="Show percentages"
-              >
-                %
-              </button>
-              </div>
-            </div>
-          )}
-
           {chartType === "sankey" ? (
             isMobile ? (
               <MobileAllocation data={data} stats={stats} showPercent={showPercent} currency={currency} />
@@ -191,9 +183,10 @@ const Index = () => {
               updateItem={updateItem}
               removeItem={removeItem}
               currency={currency}
+              showPercent={showPercent}
             />
           ) : chartType === "analyses" ? (
-            <AnalysisPanel stats={stats} currency={currency} />
+            <AnalysisPanel stats={stats} currency={currency} showPercent={showPercent} />
           ) : (
             <SettingsPanel
               darkMode={darkMode}
@@ -218,7 +211,8 @@ const Index = () => {
           )}
         </div>
       </main>
-    </div>
+      )}
+    </SwipeableSidebar>
   );
 };
 

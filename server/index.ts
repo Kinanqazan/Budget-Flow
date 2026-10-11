@@ -9,9 +9,10 @@ import { config } from "./config";
 import { initDB } from "./db/schema";
 import { authRoutes } from "./routes/auth";
 import { budgetRoutes } from "./routes/budget";
+import { assistantRoutes } from "./routes/assistant";
 
 const app = Fastify({
-  logger: { level: config.LOG_LEVEL },
+  logger: { level: config.LOG_LEVEL, redact: ["req.headers.authorization"] },
 });
 
 async function start() {
@@ -41,6 +42,7 @@ async function start() {
   });
 
   await app.register(budgetRoutes);
+  await app.register(assistantRoutes);
 
   // Use cwd so Docker (node server/dist/index.js) resolves /app/dist, not /app/server/dist.
   const distPath = path.join(process.cwd(), "dist");

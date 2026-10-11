@@ -16,6 +16,7 @@ interface BudgetData {
   dark_mode: number;
   currency: string;
   updated_at: string;
+  revision?: number;
 }
 
 interface DBState {
@@ -62,9 +63,11 @@ export class MockDatabase {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(this.filePath, JSON.stringify(this.state, null, 2));
+      const temporary = this.filePath + ".tmp";
+      fs.writeFileSync(temporary, JSON.stringify(this.state, null, 2));
+      fs.renameSync(temporary, this.filePath);
     } catch (e) {
-      console.error("Failed to save mock database JSON file:", e);
+      throw new Error(`Failed to save budget storage: ${e instanceof Error ? e.message : "unknown error"}`);
     }
   }
 
@@ -100,7 +103,7 @@ export class MockDatabase {
           return user ? { id: user.id, username: user.username, password_hash: user.password_hash } : undefined;
         }
 
-        if (/SELECT\s+finance_data,\s+dark_mode,\s+currency,\s+updated_at\s+FROM\s+budget_data\s+WHERE\s+user_id\s+=\s+\?/i.test(sanitized)) {
+        if (/SELECT\s+finance_data,\s+dark_mode,\s+currency,\s+updated_at(?:,\s+revision)?\s+FROM\s+budget_data\s+WHERE\s+user_id\s+=\s+\?/i.test(sanitized)) {
           const userId = params[0] as string;
           const row = this.state.budget_data.find((b) => b.user_id === userId);
           return row
@@ -109,12 +112,13 @@ export class MockDatabase {
                 dark_mode: row.dark_mode,
                 currency: row.currency,
                 updated_at: row.updated_at,
+                revision: row.revision ?? 0,
               }
             : undefined;
         }
 
-        if (/SELECT\s+COUNT\(\*\)\s+as\s+count\s+FROM\s+users/i.test(sanitized)) {
-          return { count: this.state.users.length };
+        if (/SELECT\s+COUNT\(\*\)\s+as\s+count(?:,\s+MIN\(id\)\s+as\s+id)?\s+FROM\s+users/i.test(sanitized)) {
+          return { count: this.state.users.length, id: this.state.users[0]?.id };
         }
 
         if (/INSERT\s+INTO\s+users\s+\(username,\s+password_hash\)\s+SELECT\s+\?,\s+\?\s+WHERE\s+NOT\s+EXISTS\s+\(SELECT\s+1\s+FROM\s+users\)\s+RETURNING\s+id/i.test(sanitized)) {
@@ -176,6 +180,9 @@ export class MockDatabase {
           const currency = params[3] as string;
 
           const idx = this.state.budget_data.findIndex(b => b.user_id === userId);
+          const expected = params[4] as number | undefined;
+          if (expected !== undefined && (idx === -1 ? expected !== 0 : (this.state.budget_data[idx].revision ?? 0) !== expected)) return { changes: 0 };
+          const previous = structuredClone(this.state.budget_data);
           if (idx !== -1) {
             this.state.budget_data[idx] = {
               ...this.state.budget_data[idx],
@@ -183,6 +190,7 @@ export class MockDatabase {
               dark_mode: darkMode,
               currency,
               updated_at: new Date().toISOString(),
+              revision: (this.state.budget_data[idx].revision ?? 0) + 1,
             };
           } else {
             this.state.budget_data.push({
@@ -192,9 +200,10 @@ export class MockDatabase {
               dark_mode: darkMode,
               currency,
               updated_at: new Date().toISOString(),
+              revision: 1,
             });
           }
-          this.save();
+          try { this.save(); } catch (error) { this.state.budget_data = previous; throw error; }
           return { changes: 1 };
         }
 

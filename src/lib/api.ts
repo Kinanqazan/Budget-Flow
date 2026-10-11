@@ -4,6 +4,10 @@ import type { FinanceData } from "@/types/finance";
 const TOKEN_KEY = "budgetflow-token";
 export { TOKEN_KEY };
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 class ApiClient {
   private getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -34,7 +38,7 @@ class ApiClient {
         const res = await fetch(path, { ...options, headers });
         if (res.status === 401) {
           this.clearToken();
-          throw new Error("Unauthorized");
+          throw new ApiError(401, "Unauthorized");
         }
         if (!res.ok) {
           const body = await res.text();
@@ -45,11 +49,11 @@ class ApiClient {
           } catch {
             // plain-text error body
           }
-          throw new Error(message);
+          throw new ApiError(res.status, message);
         }
         return res.json();
       } catch (err) {
-        if (attempt === retries) throw err;
+        if (attempt === retries || (options.method && options.method !== "GET") || (err instanceof ApiError && err.status < 500)) throw err;
         await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt)));
       }
     }
@@ -78,10 +82,10 @@ class ApiClient {
   budget = {
     get: () =>
       this.request<ApiBudgetData>("/api/budget"),
-    save: (data: FinanceData, darkMode: boolean, currency: string) =>
-      this.request<{ success: boolean }>("/api/budget", {
+    save: (data: FinanceData, darkMode: boolean, currency: string, expectedRevision: number) =>
+      this.request<ApiBudgetData>("/api/budget", {
         method: "PUT",
-        body: JSON.stringify({ finance_data: data, dark_mode: darkMode, currency }),
+        body: JSON.stringify({ finance_data: data, dark_mode: darkMode, currency, expected_revision: expectedRevision }),
       }),
   };
 }

@@ -15,6 +15,7 @@ export interface ApiBudgetData {
   dark_mode: boolean;
   currency: string;
   updated_at?: string;
+  revision: number;
 }
 
 export interface ApiSetupStatus {
