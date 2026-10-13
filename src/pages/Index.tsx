@@ -18,7 +18,7 @@ const Index = () => {
   const { user, loading: authLoading, username, authEnabled, registrationAvailable, signIn, signUp, signOut, deleteAccount } = useAuth();
 
   const {
-    data, stats, darkMode, setDarkMode, currency, setCurrency, currencies, loading,
+    data, stats, darkMode, setDarkMode, currency, setCurrency, currencies, loading, setAnalysisForecast,
     updateIncome, addIncome, removeIncome, moveIncome,
     updateCategory, addCategory, removeCategory, moveCategory,
     updateItem, addItem, removeItem, moveItem,
@@ -73,7 +73,7 @@ const Index = () => {
         />
     )}>
       {({ open, isOpen: sidebarOpen }) => (
-      <main className={`flex-1 overflow-auto p-4 flex flex-col min-w-0 ${chartType === "analyses" ? "scrollbar-hidden" : ""}`}>
+      <main className="flex-1 overflow-auto scrollbar-hidden p-4 flex flex-col min-w-0">
         {syncConflict && (
           <div role="alert" className="mb-3 rounded-lg border border-border bg-card p-3 text-sm">
             <p>Changes could not be saved or confirmed. Your unsaved edits are kept here. Loading the saved budget replaces them.</p>
@@ -167,7 +167,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className={`relative flex-1 ${chartType === "table" ? "p-1" : "p-4"} flex flex-col min-h-0 overflow-y-auto`}>
+        <div className={`relative flex-1 ${chartType === "table" ? "p-1" : "p-4"} flex flex-col min-h-0 overflow-y-auto scrollbar-hidden`}>
           {chartType === "sankey" ? (
             isMobile ? (
               <MobileAllocation data={data} stats={stats} showPercent={showPercent} currency={currency} />
@@ -186,7 +186,13 @@ const Index = () => {
               showPercent={showPercent}
             />
           ) : chartType === "analyses" ? (
-            <AnalysisPanel stats={stats} currency={currency} showPercent={showPercent} />
+            <AnalysisPanel
+              stats={stats}
+              currency={currency}
+              showPercent={showPercent}
+              forecastSettings={data.analysisForecast}
+              onForecastSettingsChange={setAnalysisForecast}
+            />
           ) : (
             <SettingsPanel
               darkMode={darkMode}

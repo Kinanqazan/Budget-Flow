@@ -33,6 +33,14 @@ export interface FinanceData {
   categories: Category[];
   remainingColor?: string;
   incomeColor?: string;
+  analysisForecast?: AnalysisForecastSettings;
+}
+
+export interface AnalysisForecastSettings {
+  annualInterestRate: string;
+  durationYears: string;
+  initialCapital?: string;
+  compoundingInterval?: "monthly" | "annual";
 }
 
 export interface Stats {

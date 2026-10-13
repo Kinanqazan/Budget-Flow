@@ -43,6 +43,16 @@ function keys(value: Fields, allowed: string[]) {
 export function validateFinance(value: unknown): FinanceData {
   const data = object(value);
   if (!Array.isArray(data.income) || !Array.isArray(data.categories)) throw new BudgetError(400, "Invalid finance_data");
+  if (data.analysisForecast !== undefined) {
+    const forecast = object(data.analysisForecast);
+    keys(forecast, ["annualInterestRate", "durationYears", "initialCapital", "compoundingInterval"]);
+    if (typeof forecast.annualInterestRate !== "string" || forecast.annualInterestRate.length > 24
+      || typeof forecast.durationYears !== "string" || forecast.durationYears.length > 8
+      || (forecast.initialCapital !== undefined && (typeof forecast.initialCapital !== "string" || forecast.initialCapital.length > 24))
+      || (forecast.compoundingInterval !== undefined && forecast.compoundingInterval !== "monthly" && forecast.compoundingInterval !== "annual")) {
+      throw new BudgetError(400, "Invalid analysis forecast settings");
+    }
+  }
   const ids = new Set<string>();
   const checkId = (value: unknown) => {
     const id = text(value, 128);

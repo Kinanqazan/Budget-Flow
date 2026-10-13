@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import type { FinanceData, Stats, ExpenseItem, CategoryType } from "@/types/finance";
+import type { FinanceData, Stats, ExpenseItem, CategoryType, AnalysisForecastSettings } from "@/types/finance";
 import { toast } from "sonner";
 import { useBudgetSync } from "./useBudgetSync";
 import { calculateStats } from "../../server/finance";
@@ -129,6 +129,12 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
   const setData = useCallback((value: React.SetStateAction<FinanceData>) => {
     markEdited(); setDataState(value);
   }, [markEdited]);
+  const setAnalysisForecast = useCallback((settings: AnalysisForecastSettings) => {
+    const nextData = { ...data, analysisForecast: settings };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData)); } catch { /* Keep the in-memory settings if local storage is unavailable. */ }
+    markEdited();
+    setDataState(nextData);
+  }, [data, markEdited]);
   const setDarkMode = useCallback((value: React.SetStateAction<boolean>) => {
     markEdited(); setDarkModeState(value);
   }, [markEdited]);
@@ -458,7 +464,7 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
   }, [data, currency, userId, saveSynced]);
 
   return {
-    data, setData, stats, darkMode, setDarkMode, currency, setCurrency: setCurrencyAndSave, currencies: defaultCurrencies, loading,
+    data, setData, setAnalysisForecast, stats, darkMode, setDarkMode, currency, setCurrency: setCurrencyAndSave, currencies: defaultCurrencies, loading,
     updateIncome, addIncome, removeIncome, moveIncome,
     updateCategory, addCategory, removeCategory, moveCategory,
     updateItem, addItem, removeItem, moveItem, moveItemCategory,

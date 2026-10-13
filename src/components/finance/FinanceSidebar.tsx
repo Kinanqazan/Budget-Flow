@@ -27,7 +27,7 @@ interface Props {
   onClose: () => void;
 }
 
-const nameFieldClass = "h-9 w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[15px] text-foreground outline-none transition-colors hover:bg-accent/50 focus:border-ring focus:bg-background focus:ring-2 focus:ring-ring/20";
+const nameFieldClass = "h-8 w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 text-[15px] text-foreground outline-none transition-colors hover:bg-accent/50 focus:border-ring focus:bg-background focus:ring-2 focus:ring-ring/20";
 const actionClass = "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function ColorPicker({ color, label, onChange }: { color: string; label: string; onChange: (color: string) => void }) {
@@ -60,7 +60,7 @@ function PressHoldActions({ name, children, menu }: { name: string; children: Re
   };
 
   const beginHold = (target: EventTarget | null, x: number, y: number, button = 0) => {
-    if (!(target instanceof Element) || button !== 0 || target.closest("button, label, input[type='number'], input[type='color'], textarea, select")) return;
+    if (!(target instanceof Element) || button !== 0 || target.closest("button, label, input, textarea, select")) return;
     clearTimer();
     startRef.current = [x, y];
     timerRef.current = window.setTimeout(openMenu, 500);
@@ -113,7 +113,7 @@ function PressHoldActions({ name, children, menu }: { name: string; children: Re
         }}
       >
         {children}
-        <DropdownMenuTrigger className="absolute right-1 top-1/2 h-px w-px -translate-y-1/2 overflow-hidden opacity-0" aria-label={`Actions for ${name}`}>
+        <DropdownMenuTrigger className="pointer-events-none absolute right-1 top-1/2 h-px w-px -translate-y-1/2 overflow-hidden opacity-0" aria-label={`Actions for ${name}`}>
           Actions
         </DropdownMenuTrigger>
       </div>
@@ -131,10 +131,10 @@ function BudgetRow({ name, value, onNameChange, onValueChange, menu }: {
 }) {
   return (
     <PressHoldActions name={name} menu={menu}>
-      <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-3">
-        <input className={nameFieldClass} value={name} onChange={(event) => onNameChange(event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Name for ${name}`} title={`Press and hold for ${name} actions`} />
+      <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-2">
+        <input className={nameFieldClass} value={name} onChange={(event) => onNameChange(event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Name for ${name}`} title="Click to edit; press and hold the row for actions" />
         <input
-          className="h-9 w-full min-w-0 rounded-md border border-border/60 bg-background px-2 text-right text-[15px] font-medium tabular-nums text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          className="h-8 w-full min-w-0 rounded-md border border-border/60 bg-background px-2 text-right text-[15px] font-medium tabular-nums text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
           type="number" step="0.01" min="0" value={value}
           onChange={(event) => onValueChange(event.target.value)} onFocus={(event) => event.target.select()}
           aria-label={`Monthly amount for ${name}`}
@@ -153,7 +153,7 @@ export default function FinanceSidebar({
 
   return (
     <aside className="flex h-full w-[320px] min-w-[320px] flex-col border-r border-border/60 bg-sidebar" aria-label="Budget editor">
-      <div className="flex items-center gap-2 border-b border-border/60 px-3 py-3">
+      <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
         <h1 className="min-w-0 flex-1 px-2 text-base font-semibold tracking-tight text-foreground">BudgetFlow</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -168,7 +168,7 @@ export default function FinanceSidebar({
         <button onClick={onClose} className={actionClass} title="Close sidebar" aria-label="Close sidebar"><ChevronLeft size={18} /></button>
       </div>
 
-      <div className="scrollbar-thin flex-1 space-y-5 overflow-y-auto px-3 py-3">
+      <div className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-3 py-2.5">
         <section className="space-y-1.5" aria-label="Income">
             <div className="flex items-center gap-1">
             <ColorPicker color={data.incomeColor || "#2196F3"} label="Choose income color" onChange={updateIncomeColor} />
@@ -193,7 +193,7 @@ export default function FinanceSidebar({
           if (group.length === 0) return null;
           const label = type === "expense" ? "Expenses" : "Investments";
           return (
-            <section key={type} className="space-y-3" aria-label={label}>
+            <section key={type} className="space-y-2.5" aria-label={label}>
               <h2 className="px-2 text-sm font-semibold text-muted-foreground">{label}</h2>
               {group.map(({ category, index: ci }, groupIndex) => (
                 <div key={category.id} className="space-y-1.5">
@@ -215,7 +215,7 @@ export default function FinanceSidebar({
                   )}>
                     <div className="flex items-center gap-1">
                       <ColorPicker color={category.color} label={`Choose color for ${category.name}`} onChange={(color) => updateCategory(ci, "color", color)} />
-                      <input className={`${nameFieldClass} flex-1 font-semibold`} value={category.name} onChange={(event) => updateCategory(ci, "name", event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Category name for ${category.name}`} title={`Press and hold for ${category.name} actions`} />
+                      <input className={`${nameFieldClass} flex-1 font-semibold`} value={category.name} onChange={(event) => updateCategory(ci, "name", event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Category name for ${category.name}`} title="Click to edit; press and hold the row for actions" />
                     </div>
                   </PressHoldActions>
                   {category.items.map((item, ii) => (

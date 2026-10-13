@@ -1,35 +1,56 @@
-import { ChartNoAxesCombined, Receipt } from "lucide-react";
-import type { Stats } from "@/types/finance";
+import { ChartNoAxesCombined, ChevronRight, Receipt } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { AnalysisForecastSettings, Stats } from "@/types/finance";
 
 interface Props {
   stats: Stats;
   currency: string;
   showPercent?: boolean;
+  forecastSettings?: AnalysisForecastSettings;
+  onForecastSettingsChange?: (settings: AnalysisForecastSettings) => void;
 }
 
-export default function AnalysisPanel({ stats, currency, showPercent = true }: Props) {
-  const annualIncome = stats.income * 12;
-  const annualExpenses = stats.expenses * 12;
-  const annualInvestments = stats.investments * 12;
-  const annualDifference = stats.remaining * 12;
+const defaultForecastSettings: AnalysisForecastSettings = { annualInterestRate: "", durationYears: "10", initialCapital: "0", compoundingInterval: "monthly" };
+
+export default function AnalysisPanel({ stats, currency, showPercent = true, forecastSettings: savedForecastSettings, onForecastSettingsChange }: Props) {
+  const [period, setPeriod] = useState<"monthly" | "annual">("monthly");
+  const [forecastSettings, setForecastSettings] = useState(savedForecastSettings ?? defaultForecastSettings);
+  useEffect(() => {
+    if (savedForecastSettings) setForecastSettings(savedForecastSettings);
+  }, [savedForecastSettings?.annualInterestRate, savedForecastSettings?.durationYears, savedForecastSettings?.initialCapital, savedForecastSettings?.compoundingInterval]);
+  const updateForecastSettings = (settings: AnalysisForecastSettings) => {
+    setForecastSettings(settings);
+    onForecastSettingsChange?.(settings);
+  };
+  const multiplier = period === "annual" ? 12 : 1;
   const formatAmount = (amount: number) =>
     amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const formatPercent = (amount: number) => stats.income > 0 ? `${Math.round((amount / stats.income) * 100)}%` : "—";
 
   return (
     <div className="scrollbar-hidden flex h-full min-h-0 w-full flex-col gap-3 overflow-auto">
-      <div className="pb-1">
+      <div className="flex items-center justify-between gap-3 pb-1">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">Analysis</h2>
+        <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-lg border border-border bg-background" role="group" aria-label="Analysis period">
+          {(["monthly", "annual"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setPeriod(option)}
+              className={`h-full px-3 text-xs font-semibold capitalize transition-colors ${period === option ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              aria-pressed={period === option}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <AnalysisCard label="Income" monthly={stats.income} annual={annualIncome} currency={currency} valueClassName="text-emerald-500" formatAmount={formatAmount} showPercent={showPercent} percentage={formatPercent(stats.income)} />
-        <AnalysisCard label="Expenses" monthly={stats.expenses} annual={annualExpenses} currency={currency} valueClassName="text-foreground" formatAmount={formatAmount} showPercent={showPercent} percentage={formatPercent(stats.expenses)} />
-        <AnalysisCard label="Investments" monthly={stats.investments} annual={annualInvestments} currency={currency} valueClassName="text-violet-500" formatAmount={formatAmount} showPercent={showPercent} percentage={formatPercent(stats.investments)} />
+      <div className="grid grid-cols-2 gap-3">
+        <AnalysisCard label="Income" amount={stats.income * multiplier} currency={currency} valueClassName="text-emerald-500" formatAmount={formatAmount} showPercent={showPercent} percentage={formatPercent(stats.income)} />
         <AnalysisCard
           label="Remaining"
-          monthly={stats.remaining}
-          annual={annualDifference}
+          amount={stats.remaining * multiplier}
           currency={currency}
           valueClassName={stats.remaining >= 0 ? "text-sky-500" : "text-destructive"}
           formatAmount={formatAmount}
@@ -41,10 +62,11 @@ export default function AnalysisPanel({ stats, currency, showPercent = true }: P
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <CategoryBreakdown
           title="Spending by category"
-          description={showPercent ? "Each category’s share of total expenses." : "Regular monthly expenses and obligations."}
           emptyMessage="No expense data available yet."
           categories={stats.expenseCats}
           total={stats.expenses}
+          budgetTotal={stats.income}
+          multiplier={multiplier}
           currency={currency}
           formatAmount={formatAmount}
           icon={Receipt}
@@ -53,15 +75,21 @@ export default function AnalysisPanel({ stats, currency, showPercent = true }: P
         />
         <CategoryBreakdown
           title="Investments by category"
-          description={showPercent ? "Category shares of investments; item shares of each category." : "Monthly allocations toward assets and investment goals."}
           emptyMessage="No investment data available yet."
           categories={stats.investmentCats}
           total={stats.investments}
+          budgetTotal={stats.income}
+          multiplier={multiplier}
+          monthlyInvestment={stats.investments}
+          monthlySavings={Math.max(0, stats.remaining)}
+          forecastSettings={forecastSettings}
+          onForecastSettingsChange={updateForecastSettings}
           currency={currency}
           formatAmount={formatAmount}
           icon={ChartNoAxesCombined}
           accentClassName="text-violet-500"
           showItems
+          showForecast
           showPercent={showPercent}
         />
       </div>
@@ -71,8 +99,7 @@ export default function AnalysisPanel({ stats, currency, showPercent = true }: P
 
 interface AnalysisCardProps {
   label: string;
-  monthly: number;
-  annual: number;
+  amount: number;
   currency: string;
   valueClassName: string;
   formatAmount: (amount: number) => string;
@@ -80,28 +107,22 @@ interface AnalysisCardProps {
   percentage: string;
 }
 
-function AnalysisCard({ label, monthly, annual, currency, valueClassName, formatAmount, showPercent, percentage }: AnalysisCardProps) {
+function AnalysisCard({ label, amount, currency, valueClassName, formatAmount, showPercent, percentage }: AnalysisCardProps) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-3.5">
+    <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3.5">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
       </div>
       {showPercent ? (
         <div className={`mt-2.5 font-display ${valueClassName}`}>
-          <span className="block text-xl font-bold">{percentage}</span>
+          <span className="block text-2xl font-bold tabular-nums">{percentage}</span>
           <span className="mt-0.5 block font-sans text-[11px] text-muted-foreground">of income</span>
         </div>
       ) : (
-      <div className={`mt-2.5 grid grid-cols-2 divide-x divide-border/60 font-display ${valueClassName}`}>
-        <div>
-          <span className="block text-[10px] font-sans font-semibold uppercase tracking-wider text-muted-foreground">Monthly</span>
-          <span className="mt-1 block text-lg font-bold">{formatAmount(monthly)} {currency}</span>
+        <div className={`mt-2.5 flex min-w-0 items-baseline gap-1 font-display ${valueClassName}`}>
+          <span className="truncate text-2xl font-bold tabular-nums">{formatAmount(amount)}</span>
+          <span className="shrink-0 font-sans text-xs font-medium text-muted-foreground">{currency}</span>
         </div>
-        <div className="pl-4">
-          <span className="block text-[10px] font-sans font-semibold uppercase tracking-wider text-muted-foreground">Annual</span>
-          <span className="mt-1 block text-lg font-bold">{formatAmount(annual)} {currency}</span>
-        </div>
-      </div>
       )}
     </div>
   );
@@ -109,33 +130,37 @@ function AnalysisCard({ label, monthly, annual, currency, valueClassName, format
 
 interface CategoryBreakdownProps {
   title: string;
-  description: string;
   emptyMessage: string;
   categories: Stats["expenseCats"];
   total: number;
+  budgetTotal: number;
+  multiplier: number;
+  monthlyInvestment?: number;
+  monthlySavings?: number;
+  forecastSettings?: AnalysisForecastSettings;
+  onForecastSettingsChange?: (settings: AnalysisForecastSettings) => void;
   currency: string;
   formatAmount: (amount: number) => string;
   icon: typeof Receipt;
   accentClassName: string;
   showItems?: boolean;
+  showForecast?: boolean;
   showPercent: boolean;
 }
 
-function CategoryBreakdown({ title, description, emptyMessage, categories, total, currency, formatAmount, icon: Icon, accentClassName, showItems = false, showPercent }: CategoryBreakdownProps) {
+function CategoryBreakdown({ title, emptyMessage, categories, total, budgetTotal, multiplier, monthlyInvestment, monthlySavings, forecastSettings, onForecastSettingsChange, currency, formatAmount, icon: Icon, accentClassName, showItems = false, showForecast = false, showPercent }: CategoryBreakdownProps) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set());
   const visibleCategories = [...categories].filter((category) => category.total > 0).sort((a, b) => b.total - a.total);
 
   return (
     <section className="flex flex-col rounded-xl border border-border/70 bg-card p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <div className={`mb-1 flex items-center gap-2 ${accentClassName}`}>
-            <Icon size={16} />
-            <h3 className="font-bold text-foreground">{title}</h3>
-          </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
+      <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+        <div className={`flex min-w-0 items-center gap-2 ${accentClassName}`}>
+          <Icon size={16} className="shrink-0" />
+          <h3 className="truncate font-bold text-foreground">{title}</h3>
         </div>
-        <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">
-          {visibleCategories.length} categories
+        <span className="shrink-0 font-display text-sm font-semibold tabular-nums text-foreground">
+          {formatAmount(total * multiplier)} <span className="font-sans text-xs font-medium text-muted-foreground">{currency}</span>
         </span>
       </div>
       {visibleCategories.length === 0 ? (
@@ -143,29 +168,46 @@ function CategoryBreakdown({ title, description, emptyMessage, categories, total
       ) : (
         <div className="grid content-start grid-cols-1 gap-y-3">
           {visibleCategories.slice(0, 8).map((category) => {
-            const percentage = total > 0 ? (category.total / total) * 100 : 0;
+            const percentage = budgetTotal > 0 ? (category.total / budgetTotal) * 100 : 0;
             const investmentItems = category.items.filter((item) => item.value > 0).sort((a, b) => b.value - a.value);
+            const expandable = showItems && investmentItems.length > 0;
+            const expanded = expandedCategories.has(category.id);
+            const CategoryHeader = expandable ? "button" : "div";
             return (
               <div key={category.id}>
-                <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+                <CategoryHeader
+                  type={expandable ? "button" : undefined}
+                  aria-expanded={expandable ? expanded : undefined}
+                  aria-controls={expandable ? `analysis-category-${category.id}-items` : undefined}
+                  onClick={expandable ? () => setExpandedCategories((current) => {
+                    const next = new Set(current);
+                    if (next.has(category.id)) next.delete(category.id);
+                    else next.add(category.id);
+                    return next;
+                  }) : undefined}
+                  className={`mb-1.5 flex w-full items-center justify-between gap-3 text-left text-xs ${expandable ? "rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" : ""}`}
+                >
                   <span className="flex min-w-0 items-center gap-2 font-semibold text-foreground">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
                     <span className="truncate">{category.name}</span>
                   </span>
-                  <span className="shrink-0 font-display text-muted-foreground">{showPercent ? `${Math.round(percentage)}%` : `${formatAmount(category.total)} ${currency}`}</span>
-                </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-display text-sm font-medium tabular-nums text-foreground">{showPercent ? `${Math.round(percentage)}%` : `${formatAmount(category.total * multiplier)} ${currency}`}</span>
+                    {expandable && <ChevronRight size={14} aria-hidden="true" className={`text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />}
+                  </span>
+                </CategoryHeader>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: category.color }} />
                 </div>
-                {showItems && investmentItems.length > 0 && (
-                  <div className="mt-2 ml-4 space-y-2 border-l border-border/60 pl-3">
+                {expandable && (
+                  <div id={`analysis-category-${category.id}-items`} hidden={!expanded} className="mt-2 ml-4 space-y-2 border-l border-border/60 pl-3">
                     {investmentItems.map((item) => {
-                      const itemPercentage = category.total > 0 ? (item.value / category.total) * 100 : 0;
+                      const itemPercentage = budgetTotal > 0 ? (item.value / budgetTotal) * 100 : 0;
                       return (
                         <div key={item.id}>
                           <div className="mb-1 flex items-center justify-between gap-3 text-[11px]">
                             <span className="min-w-0 truncate text-muted-foreground">{item.name}</span>
-                            <span className="shrink-0 font-display text-muted-foreground">{showPercent ? `${Math.round(itemPercentage)}%` : `${formatAmount(item.value)} ${currency}`}</span>
+                            <span className="shrink-0 font-display text-xs font-medium tabular-nums text-foreground">{showPercent ? `${Math.round(itemPercentage)}%` : `${formatAmount(item.value * multiplier)} ${currency}`}</span>
                           </div>
                           <div className="h-1 overflow-hidden rounded-full bg-muted/70">
                             <div className="h-full rounded-full opacity-75" style={{ width: `${itemPercentage}%`, backgroundColor: category.color }} />
@@ -180,6 +222,148 @@ function CategoryBreakdown({ title, description, emptyMessage, categories, total
           })}
         </div>
       )}
+      {showForecast && <InvestmentForecast monthlyInvestment={monthlyInvestment ?? total} monthlySavings={monthlySavings ?? 0} settings={forecastSettings ?? defaultForecastSettings} onSettingsChange={onForecastSettingsChange ?? (() => {})} currency={currency} formatAmount={formatAmount} />}
     </section>
+  );
+}
+
+interface InvestmentForecastProps {
+  monthlyInvestment: number;
+  monthlySavings: number;
+  settings: AnalysisForecastSettings;
+  onSettingsChange: (settings: AnalysisForecastSettings) => void;
+  currency: string;
+  formatAmount: (amount: number) => string;
+}
+
+function InvestmentForecast({ monthlyInvestment, monthlySavings, settings, onSettingsChange, currency, formatAmount }: InvestmentForecastProps) {
+  const { annualInterestRate: rateInput, durationYears: yearsInput } = settings;
+  const initialCapitalInput = settings.initialCapital ?? "0";
+  const compoundingInterval = settings.compoundingInterval ?? "monthly";
+  const annualRate = Number(rateInput) / 100;
+  const years = Number(yearsInput);
+  const initialCapital = Number(initialCapitalInput || "0");
+  const hasValidInputs = rateInput.trim() !== "" && Number.isFinite(annualRate) && annualRate >= 0 && annualRate <= 1
+    && Number.isFinite(initialCapital) && initialCapital >= 0
+    && Number.isInteger(years) && years >= 1 && years <= 50;
+
+  const roundMoney = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+  const months = hasValidInputs ? years * 12 : 0;
+  const investmentContributions = roundMoney(monthlyInvestment * months);
+  const savedRemaining = roundMoney(monthlySavings * months);
+  let investmentBalance = initialCapital;
+
+  if (hasValidInputs) {
+    for (let month = 1; month <= months; month += 1) {
+      if (compoundingInterval === "monthly") {
+        investmentBalance *= 1 + annualRate / 12;
+      } else if (month % 12 === 0) {
+        investmentBalance *= 1 + annualRate;
+      }
+      investmentBalance += monthlyInvestment;
+    }
+    investmentBalance = roundMoney(investmentBalance);
+  }
+
+  const totalInterest = roundMoney(investmentBalance - initialCapital - investmentContributions);
+  const projectedBalance = roundMoney(initialCapital + investmentContributions + totalInterest + savedRemaining);
+
+  return (
+    <div className="mt-4 border-t border-border/70 pt-4">
+      <h4 className="mb-3 text-sm font-semibold text-foreground">Investment forecast</h4>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <label className="col-span-2 space-y-1 text-xs text-muted-foreground sm:col-span-1">
+          <span>Starting capital</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={initialCapitalInput}
+            onChange={(event) => onSettingsChange({ ...settings, initialCapital: event.target.value })}
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Starting investment capital"
+          />
+        </label>
+        <label className="space-y-1 text-xs text-muted-foreground">
+          <span>Annual interest rate (%)</span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            inputMode="decimal"
+            value={rateInput}
+            onChange={(event) => onSettingsChange({ ...settings, annualInterestRate: event.target.value })}
+            placeholder="e.g. 7"
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Annual interest rate in percent"
+          />
+        </label>
+        <label className="space-y-1 text-xs text-muted-foreground">
+          <span>Duration (years)</span>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            step="1"
+            inputMode="numeric"
+            value={yearsInput}
+            onChange={(event) => onSettingsChange({ ...settings, durationYears: event.target.value })}
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Investment duration in years"
+          />
+        </label>
+        <label className="col-span-2 space-y-1 text-xs text-muted-foreground sm:col-span-3">
+          <span>Compounding interval</span>
+          <select
+            value={compoundingInterval}
+            onChange={(event) => onSettingsChange({ ...settings, compoundingInterval: event.target.value as "monthly" | "annual" })}
+            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Compounding interval"
+          >
+            <option value="monthly">Monthly</option>
+            <option value="annual">Annually</option>
+          </select>
+        </label>
+      </div>
+      {hasValidInputs ? (
+        <div className="mt-4">
+          <h5 className="mb-2 text-xs font-semibold text-foreground">After {years} years</h5>
+          <div className="rounded-lg border border-border/70 p-3">
+            <ForecastBreakdownRow label="Starting capital" value={initialCapital} currency={currency} formatAmount={formatAmount} />
+            <ForecastBreakdownRow label="Contributions (principal)" operator="+" value={investmentContributions} currency={currency} formatAmount={formatAmount} />
+            <ForecastBreakdownRow label="Investment interest" operator="+" value={totalInterest} currency={currency} formatAmount={formatAmount} />
+            <ForecastBreakdownRow label="Remaining saved" operator="+" value={savedRemaining} currency={currency} formatAmount={formatAmount} />
+            <ForecastBreakdownRow label="Total accumulated" operator="=" value={projectedBalance} currency={currency} formatAmount={formatAmount} total />
+          </div>
+        </div>
+      ) : (
+          <p className="mt-3 text-xs text-muted-foreground">Enter a rate from 0 to 100%, starting capital of 0 or more, and a duration from 1 to 50 years to see your projection.</p>
+      )}
+    </div>
+  );
+}
+
+interface ForecastBreakdownRowProps {
+  label: string;
+  value: number;
+  currency: string;
+  formatAmount: (amount: number) => string;
+  operator?: "+" | "=";
+  total?: boolean;
+}
+
+function ForecastBreakdownRow({ label, value, currency, formatAmount, operator, total = false }: ForecastBreakdownRowProps) {
+  return (
+    <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 ${total ? "mt-1 border-t border-border/70 pt-3" : ""}`}>
+      <div className="flex items-baseline gap-2 text-xs leading-snug">
+        <span className={`w-3 shrink-0 text-center ${total ? "font-semibold text-primary" : "text-muted-foreground"}`}>{operator ?? ""}</span>
+        <span className={`whitespace-nowrap ${total ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{label}</span>
+      </div>
+      <span className={`ml-auto min-w-0 max-w-full break-words text-right font-display tabular-nums leading-tight ${total ? "text-sm font-bold text-foreground sm:text-base" : "text-sm font-medium text-foreground"}`}>
+        {formatAmount(value)} <span className="font-sans text-xs font-medium text-muted-foreground">{currency}</span>
+      </span>
+    </div>
   );
 }

@@ -1,1 +1,1 @@
-export type { IncomeItem, ExpenseItem, CategoryType, Category, FinanceData, Stats } from "../../server/finance";
+export type { IncomeItem, ExpenseItem, CategoryType, Category, FinanceData, AnalysisForecastSettings, Stats } from "../../server/finance";

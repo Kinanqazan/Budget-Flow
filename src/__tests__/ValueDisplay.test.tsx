@@ -25,31 +25,61 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Percentage display", () => {
-  it("defaults the phone summary to percentages, including undefined ratios without income", () => {
+  it("shows the phone flow as percentages, expands items, and switches to money values", () => {
     const view = render(<MobileAllocation data={data} stats={stats} />);
-    const summary = screen.getByRole("region", { name: "Budget summary" });
-    expect(summary.textContent).toContain("100%");
-    expect(summary.textContent).toContain("50%");
-    expect(summary.textContent).not.toContain("€");
+    const tree = screen.getByRole("group", { name: "Money flow tree" });
+    expect(tree.textContent).toContain("100%");
+    expect(tree.textContent).toContain("50%");
+    expect(tree.textContent).not.toContain("€");
+    expect(screen.queryByRole("region", { name: "Budget summary" })).toBeNull();
+    fireEvent.keyDown(screen.getByRole("button", { name: /Housing: 30%/ }), { key: "Enter" });
+    expect(screen.getByRole("list", { name: "Housing items" }).textContent).toContain("Rent");
+    view.rerender(<MobileAllocation data={data} stats={stats} showPercent={false} />);
+    expect(tree.textContent).toContain("900 €");
+    expect(tree.textContent).not.toContain("30%");
     const noIncome = { ...data, income: [] };
     view.rerender(<MobileAllocation data={noIncome} stats={calculateStats(noIncome)} />);
-    expect(summary.textContent).toContain("—");
-    expect(summary.textContent).not.toMatch(/€|Infinity|NaN/);
+    expect(screen.getByText("Add income to see how it flows into your categories.")).toBeTruthy();
+    expect(view.container.textContent).not.toMatch(/€|Infinity|NaN/);
   });
 
   it("shows analysis percentages by default and restores monthly and annual amounts on request", () => {
     const view = render(<AnalysisPanel stats={stats} currency="€" />);
-    expect(screen.getAllByText("100%").length).toBeGreaterThan(0);
-    expect(screen.getByText("40%")).toBeTruthy();
-    expect(screen.getByText("10%")).toBeTruthy();
+    expect(screen.getByText("100%")).toBeTruthy();
+    expect(screen.getByText("30%")).toBeTruthy();
     expect(screen.getByText("50%")).toBeTruthy();
-    expect(screen.getByText("75%")).toBeTruthy();
-    expect(view.container.textContent).not.toContain("€");
+    expect(screen.getByRole("button", { name: "Savings 10%" })).toBeTruthy();
+    expect(screen.queryByText("75%")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Annual" }));
+    expect(screen.getByRole("button", { name: "Savings 10%" })).toBeTruthy();
     view.rerender(<AnalysisPanel stats={stats} currency="€" showPercent={false} />);
-    expect(screen.getAllByText("Monthly")).toHaveLength(4);
-    expect(screen.getAllByText("Annual")).toHaveLength(4);
+    expect(screen.getAllByText("Monthly")).toHaveLength(1);
+    expect(screen.getAllByText("Annual")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Savings 3,600.00 €" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Monthly" }));
+    expect(screen.getByRole("button", { name: "Savings 300.00 €" })).toBeTruthy();
     expect(view.container.textContent).toContain("€");
-    expect(view.container.textContent).not.toContain("40%");
+    expect(screen.queryByText("30%")).toBeNull();
+  });
+
+  it("uses the overall budget for analysis investment categories and their items", () => {
+    const investmentData: FinanceData = {
+      income: [{ id: "income", name: "Salary", value: 3500 }],
+      categories: [{
+        id: "investments", name: "Savings & Investments", type: "investment", color: "#8b5cf6",
+        items: [{ id: "etf", name: "ETF Plan", value: 500 }, { id: "savings", name: "Savings Account", value: 200 }],
+      }],
+    };
+    const view = render(<AnalysisPanel stats={calculateStats(investmentData)} currency="€" />);
+    const category = screen.getByRole("button", { name: "Savings & Investments 20%" });
+    expect(category.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(category);
+    expect(screen.getByText("ETF Plan").parentElement?.textContent).toBe("ETF Plan14%");
+    expect(screen.getByText("Savings Account").parentElement?.textContent).toBe("Savings Account6%");
+    view.rerender(<AnalysisPanel stats={calculateStats({ ...investmentData, income: [] })} currency="€" />);
+    expect(screen.getByRole("button", { name: "Savings & Investments 0%" })).toBeTruthy();
+    expect(screen.getByText("ETF Plan").parentElement?.textContent).toBe("ETF Plan0%");
+    expect(view.container.textContent).not.toMatch(/Infinity|NaN/);
   });
 
   it("defaults the table to percentages and restores editable money columns without changing amounts", () => {
