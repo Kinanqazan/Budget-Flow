@@ -12,7 +12,7 @@
 <p align="center"><a href="https://budget-kinan.vercel.app/">Try the live demo</a></p>
 
 <p align="center">
-  <img src="public/readme/budgetflow-desktop-mobile.png" alt="BudgetFlow running on a laptop and phone" width="1200" />
+  <img src="public/readme/budgetflow-desktop-mobile.webp" alt="BudgetFlow running on a laptop and phone" width="1200" />
 </p>
 
 ---
