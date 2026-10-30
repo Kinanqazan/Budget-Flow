@@ -21,6 +21,9 @@ jobs:
           tag_name: apk-${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           name: "BudgetFlow APK #${{ github.run_number }}"
-          body: "APK copied from android/releases/BudgetFlow.apk at commit ${{ github.sha }}."
+          body: |
+            BudgetFlow for Android connects to your BudgetFlow server.
+
+            On first launch, enter your server's HTTPS address. The app uses it to open your BudgetFlow instance; the APK does not include the server or database.
           make_latest: true
           files: android/releases/BudgetFlow.apk
