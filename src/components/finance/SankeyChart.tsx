@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { FinanceData, Stats, ExpenseItem } from "@/types/finance";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatPercentage } from "@/lib/formatPercentage";
 
 const fmt = (v: number, currency: string) =>
   Math.round(v).toLocaleString("en-US") + " " + currency;
-
-const fmtPct = (v: number, total: number) =>
-  total > 0 ? Math.round(v / total * 100) + "%" : "0%";
 
 interface Props {
   data: FinanceData;
@@ -241,7 +239,7 @@ export default function SankeyChart({ data, stats, showPercent = true, currency 
     const fsIncome = isMobile ? "12" : "13";
     const fsCat = isMobile ? "11" : "12";
     const fsItem = isMobile ? "10.5" : "11.5";
-    const display = (val: number) => showPercent ? fmtPct(val, tot) : fmt(val, currency);
+    const display = (val: number) => showPercent ? formatPercentage(val, tot) : fmt(val, currency);
 
     // Calculate segment data and resolved vertical label positions for each income
     const incomeLabels = data.income.map((inc, idx) => {
@@ -255,7 +253,6 @@ export default function SankeyChart({ data, stats, showPercent = true, currency 
         y,
         h: segmentH,
         yStart: incomeY + prevHSum,
-        pct: tot > 0 ? Math.round((inc.value / tot) * 100) : 0,
       };
     });
 
@@ -346,9 +343,7 @@ export default function SankeyChart({ data, stats, showPercent = true, currency 
 
     // Render individual income labels
     incomeLabels.forEach((il, idx) => {
-      const labelText = showPercent
-        ? `${il.name}: ${il.pct}%`
-        : `${il.name}: ${display(il.value)}`;
+      const labelText = `${il.name}: ${display(il.value)}`;
 
       // If mobile and multiple incomes, space them horizontally (on x) and center them on y
       const labelX = isMobile

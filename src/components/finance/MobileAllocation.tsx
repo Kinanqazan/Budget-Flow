@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ExpenseItem, FinanceData, Stats } from "@/types/finance";
+import { formatPercentage } from "@/lib/formatPercentage";
 
 interface Props {
   data: FinanceData;
@@ -70,7 +71,7 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
   const incomeColor = data.incomeColor || "#60a5fa";
   const sourceY = overBudget ? 92 : 68;
   const formatValue = (value: number) => showPercent
-    ? (hasIncome ? `${Math.round((value / stats.income) * 100)}%` : "—")
+    ? (hasIncome ? formatPercentage(value, stats.income) : "—")
     : formatMoney(value, currency);
 
   useLayoutEffect(() => {

@@ -222,7 +222,7 @@ export default function FinanceTable({
     }
   });
 
-  const getColumnWidth = (column: string) => (isMobile ? mobileColWidths[column] : colWidths[column]);
+  const getColumnWidth = (column: string) => column === "actions" ? 32 : (isMobile ? mobileColWidths[column] : colWidths[column]);
   const formatPercentage = (value: number) =>
     stats.income > 0 ? `${Math.round((value / stats.income) * 100)}%` : "0%";
 
@@ -447,7 +447,7 @@ export default function FinanceTable({
   }, [flattenedItems]);
 
   const renderSectionTotal = (total: { monthly: number; annual: number }, label = "Total", emphasized = true) => (
-    <tr className={`border-t ${emphasized ? "border-primary/40 bg-primary/5" : "border-border/70 bg-muted/20"} text-sm`}>
+    <tr className="text-sm">
       {visibleColumns.map((col) => {
         const width = getColumnWidth(col);
         if (col === "name") {
@@ -468,22 +468,27 @@ export default function FinanceTable({
   );
 
   return (
-    <div className="flex flex-col h-full w-full space-y-4">
-      <div className="order-last relative z-10 flex shrink-0 items-center justify-end gap-2 rounded-xl bg-background px-2 py-2 md:order-first">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <Palette size={14} />
-          <span>Category colors</span>
+    <div className="flex h-full w-full flex-col gap-2">
+      <div className="mx-4 order-last relative z-10 mt-4 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-background px-2 py-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Contract status legend">
+          <span className="inline-flex items-center gap-1"><Clock size={12} /> Expired</span>
+          <span className="inline-flex items-center gap-1"><AlertTriangle size={12} className="text-destructive" /> Urgent (30 days or less)</span>
+          <span className="inline-flex items-center gap-1"><AlertTriangle size={12} className="text-amber-500" /> Upcoming (31–90 days)</span>
+          <span className="inline-flex items-center gap-1"><CheckCircle size={12} className="text-emerald-500" /> On track</span>
         </div>
-        <Switch checked={colorRows} onCheckedChange={setColorRows} aria-label="Color table rows by category" />
+        <div className="flex shrink-0 items-center gap-1.5 text-muted-foreground" title="Category colors">
+          <Palette size={14} aria-hidden="true" />
+          <Switch checked={colorRows} onCheckedChange={setColorRows} aria-label="Color table rows by category" className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span[data-state=checked]]:translate-x-4" />
+        </div>
       </div>
 
       {/* Notice alerts banner */}
       {activeWarnings.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 px-2 py-1.5 text-xs">
+        <div className="mx-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-2 text-xs">
             {warningStatuses.map((status) => (
               <span
                 key={status.label}
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${status.tone === "destructive" ? "bg-destructive/15 text-destructive" : status.tone === "muted" ? "bg-muted text-muted-foreground" : "bg-amber-500/10 text-amber-500"}`}
+                className={`inline-flex items-center gap-1 text-[10px] font-bold ${status.tone === "destructive" ? "text-destructive" : status.tone === "muted" ? "text-muted-foreground" : "text-amber-500"}`}
               >
                 <Clock size={10} /> {status.label} {status.count}
               </span>
@@ -492,14 +497,14 @@ export default function FinanceTable({
       )}
 
       {/* Main Table area */}
-      <div className="flex-1 bg-card border-2 border-border/80 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-0">
-        <div className="flex-1 overflow-auto scrollbar-thin">
+      <div className="flex min-h-0 flex-col overflow-hidden">
+        <div className="overflow-auto scrollbar-hidden">
           <table
-            className="w-full text-left border-collapse [&_th:not(:last-child)]:border-r [&_th:not(:last-child)]:border-border/30 [&_td:not(:last-child)]:border-r [&_td:not(:last-child)]:border-border/30"
+            className="finance-table w-full text-left"
             style={{ tableLayout: "fixed", minWidth: visibleColumns.reduce((total, column) => total + getColumnWidth(column), 0) }}
           >
-            <thead className="sticky top-0 z-10 shadow-sm">
-              <tr className="bg-card/95 backdrop-blur border-b border-border/70 text-xs uppercase font-bold text-muted-foreground tracking-wider select-none">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-background/95 backdrop-blur text-xs uppercase font-bold text-muted-foreground tracking-wider select-none">
                 {visibleColumns.map((col) => {
                   const idx = columns.indexOf(col);
                   const width = getColumnWidth(col);
@@ -519,7 +524,7 @@ export default function FinanceTable({
                       aria-label={col === "percentage" ? "Percentage of income" : undefined}
                       title={col === "percentage" ? "Percentage of income" : undefined}
                       style={{ width }}
-                      className={`py-3 px-4 uppercase font-bold text-muted-foreground tracking-wider select-none relative group/th ${alignClass}`}
+                              className={`py-3 px-4 uppercase font-bold text-muted-foreground tracking-wider select-none relative group/th ${alignClass}`}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.effectAllowed = "move";
@@ -542,7 +547,7 @@ export default function FinanceTable({
                       {col !== "actions" && (
                         <div
                           onPointerDown={(e) => startResize(e, col)}
-                          className="absolute right-0 top-0 bottom-0 z-10 w-3 touch-none cursor-col-resize after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-border/40 hover:after:bg-primary/50"
+                          className="absolute right-0 top-0 bottom-0 z-10 w-3 touch-none cursor-col-resize"
                           title="Drag to resize column"
                         />
                       )}
@@ -551,7 +556,7 @@ export default function FinanceTable({
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40 text-sm">
+            <tbody className="text-sm">
               {flattenedItems.length === 0 ? (
                 <tr>
                   <td colSpan={visibleColumns.length} className="py-12 text-center text-muted-foreground font-medium">
@@ -575,26 +580,26 @@ export default function FinanceTable({
 
                       if (diffDays < 0) {
                         alertBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-muted text-muted-foreground text-center justify-center min-w-[70px]">
-                            <Clock size={10} /> Expired
+                          <span className="text-muted-foreground" role="img" aria-label="Expired" title="Expired">
+                            <Clock size={14} aria-hidden="true" />
                           </span>
                         );
                       } else if (diffDays <= 30) {
                         alertBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-destructive/15 text-destructive border border-destructive/20 animate-pulse text-center justify-center min-w-[70px]">
-                            <AlertTriangle size={10} /> {diffDays === 0 ? "Today!" : `${diffDays}d left`}
+                          <span className="text-destructive" role="img" aria-label={diffDays === 0 ? "Urgent: today" : `Urgent: ${diffDays} days left`} title={diffDays === 0 ? "Urgent: today" : `Urgent: ${diffDays} days left`}>
+                            <AlertTriangle size={14} aria-hidden="true" />
                           </span>
                         );
                       } else if (diffDays <= 90) {
                         alertBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/15 text-center justify-center min-w-[70px]">
-                            <AlertTriangle size={10} /> {diffDays}d left
+                          <span className="text-amber-500" role="img" aria-label={`Upcoming: ${diffDays} days left`} title={`Upcoming: ${diffDays} days left`}>
+                            <AlertTriangle size={14} aria-hidden="true" />
                           </span>
                         );
                       } else {
                         alertBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/15 text-center justify-center min-w-[70px]">
-                            <CheckCircle size={10} /> On track
+                          <span className="text-emerald-500" role="img" aria-label="On track" title="On track">
+                            <CheckCircle size={14} aria-hidden="true" />
                           </span>
                         );
                       }
@@ -604,12 +609,12 @@ export default function FinanceTable({
                     <React.Fragment key={item.id}>
                     {startsSection && (
                       <tr aria-hidden="true">
-                        <td colSpan={visibleColumns.length} className="h-0.5 bg-border p-0" />
+                        <td colSpan={visibleColumns.length} className="h-4 p-0" />
                       </tr>
                     )}
                     <tr
                       className="even:bg-muted/10 hover:bg-accent/35 group transition-colors"
-                      style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.12) } : undefined}
+                      style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.16) } : undefined}
                     >
                       {visibleColumns.map((col) => {
                         const width = getColumnWidth(col);
@@ -621,7 +626,7 @@ export default function FinanceTable({
                               className="py-1.5 px-4 overflow-visible"
                               title={`Category: ${fi.categoryName}`}
                             >
-                              <div className="flex items-center gap-1.5 w-full">
+                              <div className="flex items-center gap-1 w-full">
                                 <div ref={iconPickerItemId === item.id ? iconPickerRef : undefined} className="relative shrink-0">
                                   {(() => {
                                     const ItemIcon = itemIcons[item.icon || ""] || Circle;
@@ -661,7 +666,6 @@ export default function FinanceTable({
                                   className="w-full bg-transparent border-none outline-none text-foreground font-medium focus:underline focus:bg-background/40 py-1 px-1.5 rounded truncate"
                                   value={item.name}
                                   onChange={(e) => updateItem(ci, ii, "name", e.target.value)}
-                                  onFocus={(e) => e.target.select()}
                                 />
                               </div>
                             </td>
@@ -675,7 +679,7 @@ export default function FinanceTable({
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  className="min-w-0 flex-1 bg-transparent border-none outline-none text-muted-foreground text-left font-display font-normal"
+                                  className="min-w-0 flex-1 bg-transparent border-none outline-none text-foreground text-left font-display font-normal"
                                   value={
                                     (editingValue && editingValue.id === item.id && editingValue.field === "monthly")
                                       ? editingValue.val
@@ -691,9 +695,8 @@ export default function FinanceTable({
                                       updateItem(ci, ii, "value", 0);
                                     }
                                   }}
-                                  onFocus={(e) => {
+                                  onFocus={() => {
                                     setEditingValue({ id: item.id, field: "monthly", val: (item.value || 0).toString() });
-                                    e.target.select();
                                   }}
                                   onBlur={() => {
                                     setEditingValue(null);
@@ -711,7 +714,7 @@ export default function FinanceTable({
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  className="w-full bg-transparent border-none outline-none text-muted-foreground text-left font-display font-normal"
+                                  className="w-full bg-transparent border-none outline-none text-foreground text-left font-display font-normal"
                                   value={
                                     (editingValue && editingValue.id === item.id && editingValue.field === "annual")
                                       ? editingValue.val
@@ -727,13 +730,12 @@ export default function FinanceTable({
                                       updateItem(ci, ii, "value", 0);
                                     }
                                   }}
-                                  onFocus={(e) => {
+                                  onFocus={() => {
                                     setEditingValue({
                                       id: item.id,
                                       field: "annual",
                                       val: (Math.round((item.value || 0) * 12 * 100) / 100).toString()
                                     });
-                                    e.target.select();
                                   }}
                                   onBlur={() => {
                                     setEditingValue(null);
@@ -745,7 +747,7 @@ export default function FinanceTable({
                         }
                         if (col === "percentage") {
                           return (
-                            <td key={col} style={{ width, maxWidth: width }} className="py-1.5 px-4 overflow-hidden font-display text-muted-foreground">
+                            <td key={col} style={{ width, maxWidth: width }} className="py-1.5 px-4 overflow-hidden font-display text-foreground">
                               {formatPercentage(item.value || 0)}
                             </td>
                           );
@@ -766,7 +768,7 @@ export default function FinanceTable({
                                   className="flex min-w-0 flex-1 flex-col text-left hover:bg-muted/40 p-1 rounded border border-transparent hover:border-border/30 transition-all truncate"
                                   title="Click to configure dates"
                                 >
-                                  <span className="font-display font-normal text-xs text-muted-foreground block leading-tight truncate">
+                                  <span className="font-display font-normal text-xs text-foreground block leading-tight truncate">
                                     {item.startDate || item.endDate ? (
                                       `${formatDateForDisplay(item.startDate) || "..."} - ${formatDateForDisplay(item.endDate) || "..."}`
                                     ) : (
@@ -806,7 +808,6 @@ export default function FinanceTable({
                                         className="w-full bg-background border border-border/60 text-xs p-1.5 rounded-lg outline-none text-foreground focus:border-primary/50"
                                         value={tempDates?.startDate || ""}
                                         onChange={(e) => handleTempDateChange("startDate", e.target.value, item, ci, ii)}
-                                        onFocus={(e) => e.target.select()}
                                       />
                                     </div>
                                     <div className="space-y-1.5">
@@ -819,7 +820,6 @@ export default function FinanceTable({
                                         className="w-full bg-background border border-border/60 text-xs p-1.5 rounded-lg outline-none text-foreground focus:border-primary/50"
                                         value={tempDates?.endDate || ""}
                                         onChange={(e) => handleTempDateChange("endDate", e.target.value, item, ci, ii)}
-                                        onFocus={(e) => e.target.select()}
                                       />
                                     </div>
                                     <div className="space-y-1.5">
@@ -863,7 +863,6 @@ export default function FinanceTable({
                                         value={tempDates?.cancellationDate || ""}
                                         disabled={item.noticePeriod !== "custom" && item.noticePeriod !== "none" && item.noticePeriod !== undefined}
                                         onChange={(e) => handleTempDateChange("cancellationDate", e.target.value, item, ci, ii)}
-                                        onFocus={(e) => e.target.select()}
                                       />
                                     </div>
                                   </div>
@@ -876,18 +875,17 @@ export default function FinanceTable({
                           return (
                             <td key={col} style={{ width, maxWidth: width }} className="py-1.5 px-4 overflow-hidden">
                               <input
-                                className="w-full bg-transparent border-none outline-none text-muted-foreground placeholder:text-muted-foreground/30 focus:underline focus:text-foreground focus:bg-background/40 py-1 px-1.5 rounded truncate"
+                                className="w-full bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/30 focus:underline focus:bg-background/40 py-1 px-1.5 rounded truncate"
                                 placeholder="e.g. Allianz"
                                 value={item.infos || ""}
                                 onChange={(e) => updateItem(ci, ii, "infos", e.target.value)}
-                                onFocus={(e) => e.target.select()}
                               />
                             </td>
                           );
                         }
                         if (col === "actions") {
                           return (
-                            <td key={col} style={{ width, maxWidth: width }} className="py-1.5 px-4 text-center overflow-hidden">
+                            <td key={col} style={{ width: 32, maxWidth: 32 }} className="px-0 py-1.5 text-center">
                               <button
                                 onClick={() => {
                                   if (window.confirm(`Delete item "${item.name}"?`)) {
@@ -895,7 +893,7 @@ export default function FinanceTable({
                                     toast.success(`Removed ${item.name}`);
                                   }
                                 }}
-                                className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -905,10 +903,15 @@ export default function FinanceTable({
                         return null;
                       })}
                     </tr>
-                    {endsSection && renderSectionTotal(fi.categoryType === "investment" ? totals.investments : totals.expenses)}
+                    {endsSection && renderSectionTotal(fi.categoryType === "investment" ? totals.investments : totals.expenses, fi.categoryType === "investment" ? "Total investments" : "Total expenses")}
                   </React.Fragment>
                 );
               })
+              )}
+              {flattenedItems.some((fi) => fi.categoryType === "investment") && (
+                <tr aria-hidden="true">
+                  <td colSpan={visibleColumns.length} className="h-4 p-0" />
+                </tr>
               )}
               {renderSectionTotal({ monthly: stats.remaining, annual: stats.remaining * 12 }, "Remaining", true)}
             </tbody>

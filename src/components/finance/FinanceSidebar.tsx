@@ -132,11 +132,11 @@ function BudgetRow({ name, value, onNameChange, onValueChange, menu }: {
   return (
     <PressHoldActions name={name} menu={menu}>
       <div className="grid grid-cols-[minmax(0,1fr)_88px] items-center gap-2">
-        <input className={nameFieldClass} value={name} onChange={(event) => onNameChange(event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Name for ${name}`} title="Click to edit; press and hold the row for actions" />
+        <input className={nameFieldClass} value={name} onChange={(event) => onNameChange(event.target.value)} aria-label={`Name for ${name}`} title="Click to edit; press and hold the row for actions" />
         <input
           className="h-8 w-full min-w-0 rounded-md border border-border/60 bg-background px-2 text-right text-[15px] font-medium tabular-nums text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
           type="number" step="0.01" min="0" value={value}
-          onChange={(event) => onValueChange(event.target.value)} onFocus={(event) => event.target.select()}
+          onChange={(event) => onValueChange(event.target.value)}
           aria-label={`Monthly amount for ${name}`}
         />
       </div>
@@ -154,7 +154,10 @@ export default function FinanceSidebar({
   return (
     <aside className="flex h-full w-[320px] min-w-[320px] flex-col border-r border-border/60 bg-sidebar" aria-label="Budget editor">
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2.5">
-        <h1 className="min-w-0 flex-1 px-2 text-base font-semibold tracking-tight text-foreground">BudgetFlow</h1>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <img src="/favicon.svg" alt="" className="h-6 w-6 shrink-0" />
+          <h1 className="min-w-0 text-base font-semibold tracking-tight text-foreground">BudgetFlow</h1>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={actionClass} title="Add income or category" aria-label="Add income or category"><Plus size={18} /></button>
@@ -193,10 +196,10 @@ export default function FinanceSidebar({
           if (group.length === 0) return null;
           const label = type === "expense" ? "Expenses" : "Investments";
           return (
-            <section key={type} className="space-y-2.5" aria-label={label}>
+            <section key={type} className="space-y-2.5 border-t border-border/60 pt-3" aria-label={label}>
               <h2 className="px-2 text-sm font-semibold text-muted-foreground">{label}</h2>
               {group.map(({ category, index: ci }, groupIndex) => (
-                <div key={category.id} className="space-y-1.5">
+                <div key={category.id} className={`space-y-1.5 ${groupIndex > 0 ? "border-t border-border/60 pt-3" : ""}`}>
                   <PressHoldActions name={category.name} menu={(
                     <>
                       <DropdownMenuItem onSelect={() => addItem(ci)}><Plus size={14} /> Add item</DropdownMenuItem>
@@ -215,7 +218,7 @@ export default function FinanceSidebar({
                   )}>
                     <div className="flex items-center gap-1">
                       <ColorPicker color={category.color} label={`Choose color for ${category.name}`} onChange={(color) => updateCategory(ci, "color", color)} />
-                      <input className={`${nameFieldClass} flex-1 font-semibold`} value={category.name} onChange={(event) => updateCategory(ci, "name", event.target.value)} onFocus={(event) => event.target.select()} aria-label={`Category name for ${category.name}`} title="Click to edit; press and hold the row for actions" />
+                      <input className={`${nameFieldClass} flex-1 font-semibold`} value={category.name} onChange={(event) => updateCategory(ci, "name", event.target.value)} aria-label={`Category name for ${category.name}`} title="Click to edit; press and hold the row for actions" />
                     </div>
                   </PressHoldActions>
                   {category.items.map((item, ii) => (

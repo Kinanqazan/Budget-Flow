@@ -14,6 +14,10 @@ import AnalysisPanel from "@/components/finance/AnalysisPanel";
 import SettingsPanel from "@/components/finance/SettingsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+type ChartType = "sankey" | "donut" | "table" | "analyses" | "settings";
+const chartTypes: ChartType[] = ["sankey", "donut", "table", "analyses", "settings"];
+const currentViewKey = "budgetflow-current-view";
+
 const Index = () => {
   const { user, loading: authLoading, username, authEnabled, registrationAvailable, signIn, signUp, signOut, deleteAccount } = useAuth();
 
@@ -30,8 +34,23 @@ const Index = () => {
   } = useFinanceData(user?.id, !!user);
 
   const [showPercent, setShowPercent] = useState(true);
-  const [chartType, setChartType] = useState<"sankey" | "donut" | "table" | "analyses" | "settings">("sankey");
+  const [chartType, setChartType] = useState<ChartType>(() => {
+    try {
+      const saved = sessionStorage.getItem(currentViewKey);
+      return chartTypes.find((type) => type === saved) ?? "sankey";
+    } catch {
+      return "sankey";
+    }
+  });
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(currentViewKey, chartType);
+    } catch {
+      // The app remains usable if browser storage is unavailable.
+    }
+  }, [chartType]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -73,9 +92,9 @@ const Index = () => {
         />
     )}>
       {({ open, isOpen: sidebarOpen }) => (
-      <main className="flex-1 overflow-auto scrollbar-hidden p-4 flex flex-col min-w-0">
+      <main className={`flex-1 overflow-auto scrollbar-hidden ${chartType === "table" ? "p-0" : "p-4"} flex flex-col min-w-0`}>
         {syncConflict && (
-          <div role="alert" className="mb-3 rounded-lg border border-border bg-card p-3 text-sm">
+          <div role="alert" className={`mb-3 rounded-lg border border-border bg-card p-3 text-sm ${chartType === "table" ? "mx-4 mt-4" : ""}`}>
             <p>Changes could not be saved or confirmed. Your unsaved edits are kept here. Loading the saved budget replaces them.</p>
             <div className="mt-2 flex gap-3">
               <button className="underline" onClick={saveToJson}>Export my edits</button>
@@ -83,7 +102,7 @@ const Index = () => {
             </div>
           </div>
         )}
-        <div className="flex items-center justify-between gap-2.5 mb-4 select-none w-full flex-nowrap">
+        <div className={`flex items-center justify-between gap-2.5 select-none flex-nowrap ${chartType === "table" ? "mx-4 mt-4 mb-2 w-auto" : "mb-4 w-full"}`}>
           {/* Left: Sidebar Toggle */}
           <div className="flex items-center gap-1.5 shrink-0">
             {!sidebarOpen && (
@@ -167,7 +186,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className={`relative flex-1 ${chartType === "table" ? "p-1" : "p-4"} flex flex-col min-h-0 overflow-y-auto scrollbar-hidden`}>
+        <div className={`relative flex-1 ${chartType === "table" ? "p-0" : chartType === "analyses" ? "p-0 md:p-4" : "p-4"} flex flex-col min-h-0 overflow-y-auto scrollbar-hidden`}>
           {chartType === "sankey" ? (
             isMobile ? (
               <MobileAllocation data={data} stats={stats} showPercent={showPercent} currency={currency} />

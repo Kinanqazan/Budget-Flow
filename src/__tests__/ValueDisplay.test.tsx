@@ -25,6 +25,18 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Percentage display", () => {
+  it("does not select the entire field when table or sidebar inputs receive focus", () => {
+    const select = vi.spyOn(HTMLInputElement.prototype, "select");
+    const table = render(<FinanceTable data={data} stats={stats} currency="€" showPercent={false} updateItem={vi.fn()} removeItem={vi.fn()} />);
+    table.container.querySelectorAll<HTMLInputElement>('input[type="number"], input:not([type])').forEach((input) => fireEvent.focus(input));
+    table.unmount();
+    const sidebar = render(<FinanceSidebar data={data} updateIncome={vi.fn()} updateCategory={vi.fn()} updateItem={vi.fn()}
+      addIncome={vi.fn()} removeIncome={vi.fn()} moveIncome={vi.fn()} addCategory={vi.fn()} removeCategory={vi.fn()} moveCategory={vi.fn()}
+      addItem={vi.fn()} removeItem={vi.fn()} moveItem={vi.fn()} updateIncomeColor={vi.fn()} onClose={vi.fn()} />);
+    sidebar.container.querySelectorAll<HTMLInputElement>('input[type="number"], input:not([type])').forEach((input) => fireEvent.focus(input));
+    expect(select).not.toHaveBeenCalled();
+    select.mockRestore();
+  });
   it("shows the phone flow as percentages, expands items, and switches to money values", () => {
     const view = render(<MobileAllocation data={data} stats={stats} />);
     const tree = screen.getByRole("group", { name: "Money flow tree" });
