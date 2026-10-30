@@ -31,6 +31,7 @@
 - Local SQLite database (self-hosted)
 - Single account per self-hosted installation
 - Login required by default in Docker deployments; local preview remains available with authentication disabled
+- The public Vercel demo does not require an account; demo edits stay in the visitor's browser
 - JSON Export/Import for backups
 
 ---

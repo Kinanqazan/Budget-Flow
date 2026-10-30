@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import type { ApiUser } from "@/types/api";
 import { api, TOKEN_KEY } from "@/lib/api";
 
+const PUBLIC_DEMO_HOST = "budget-kinan.vercel.app";
+
 export function useAuth() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -10,6 +12,14 @@ export function useAuth() {
   const [registrationAvailable, setRegistrationAvailable] = useState(false);
 
   useEffect(() => {
+    if (window.location.hostname === PUBLIC_DEMO_HOST) {
+      api.clearToken();
+      setAuthEnabled(false);
+      setRegistrationAvailable(false);
+      setLoading(false);
+      return;
+    }
+
     api.auth.setupStatus().then((status) => {
       setAuthEnabled(status.authEnabled);
       setRegistrationAvailable(status.authEnabled && status.needsSetup);
