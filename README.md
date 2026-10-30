@@ -9,30 +9,41 @@
 
 > A modern, self-hosted personal finance visualization application that helps you understand where your money goes through beautiful, intuitive charts.
 
-<img width="2551" height="1031" alt="image" src="https://github.com/user-attachments/assets/175e08ed-ffd0-4c29-8d72-443972f71de3" />
+<p align="center"><a href="https://budget-kinan.vercel.app/">Try the live demo</a></p>
 
+<p align="center">
+  <img src="public/readme/budgetflow-desktop-mobile.png" alt="BudgetFlow running on a laptop and phone" width="1200" />
+</p>
 
 ---
 
 ## Features
 
 ### Interactive Charts
-- **Sankey Flow** - Visualize money flow from income → categories → expenses
-- **Donut Chart** - See proportional expense breakdown with category colors
-- **Smart Alerts** - Warnings when expenses exceed income
+- **Sankey flow** - Follow income through expense and investment categories to individual items; the layout adapts for mobile screens.
+- **Donut chart** - Compare expense and investment categories at a glance.
+- **Table view** - Review and edit budget items with monthly and annual amounts, percentages of income, dates, and category totals.
 
-### Smart Controls
-- Multi-Currency support (€ $ £ CHF ¥ ₹ ₽ ₩)
-- Live Updates - Edit in sidebar, see changes instantly
-- Value/% Toggle - Switch between numbers and percentages
-- Dark/Light Mode
+<p align="center">
+  <img src="public/readme/budgetflow-mobile-flow.png" alt="BudgetFlow's Sankey money-flow chart on a phone" width="320" />
+</p>
 
-### Data Management
-- Local SQLite database (self-hosted)
-- Single account per self-hosted installation
-- Login required by default in Docker deployments; local preview remains available with authentication disabled
-- The public Vercel demo does not require an account; demo edits stay in the visitor's browser
-- JSON Export/Import for backups
+### Spending and investment analysis
+- Compare income and remaining budget with spending and investment totals.
+- Break expenses and investments down by category; expand investment categories to see individual contributions.
+- Switch between monthly and annual totals, or show amounts as percentages of income.
+- Explore an investment forecast from starting capital and current monthly investment contributions, using an assumed annual rate, time horizon, and monthly or annual compounding. The projection also shows savings from the remaining monthly budget separately.
+
+### Budget planning
+- Edit multiple income sources, expense and investment categories, and their items. Reorder entries and customize category colors.
+- Track start and end dates, cancellation dates, notice periods, and notes for budget items.
+- See upcoming, urgent, and expired cancellation deadlines in the table. The charts also highlight when planned outflows exceed income.
+
+### Settings and data
+- Choose from multiple currencies and light or dark appearance.
+- Import and export CSV files; export and restore JSON backups.
+- Save data locally in a browser or sync to the SQLite database in a self-hosted deployment.
+- Self-hosted Docker deployments require sign-in by default. The public Vercel demo needs no account and stores data in each visitor's browser.
 
 ---
 
@@ -51,7 +62,7 @@ The recommended way to run BudgetFlow is using Docker Compose. Since the project
    ```yaml
    services:
      budgetflow:
-       image: ghcr.io/kinanqaz/budget-flow:latest
+       image: ghcr.io/kinanqazan/budget-flow:latest
        container_name: budgetflow
        ports:
          - "3000:3000"
@@ -101,11 +112,10 @@ Since your image is hosted on GitHub Packages, updates are lightweight and insta
    cd budgetflow
    ```
 
-2. Pull the latest image, restart the container, and clean up the old image files:
+2. Pull the latest image and restart the container:
    ```bash
    docker compose pull
    docker compose up -d
-   docker system prune -f
    ```
 
 ---
