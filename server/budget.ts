@@ -45,6 +45,7 @@ export function validateFinance(value: unknown): FinanceData {
   if (!Array.isArray(data.income) || !Array.isArray(data.categories)) throw new BudgetError(400, "Invalid finance_data");
   if (data.analysisForecast !== undefined) {
     const forecast = object(data.analysisForecast);
+    // Accept and discard this legacy field so older clients can still save forecasts.
     keys(forecast, ["annualInterestRate", "durationYears", "initialCapital", "compoundingInterval"]);
     if (typeof forecast.annualInterestRate !== "string" || forecast.annualInterestRate.length > 24
       || typeof forecast.durationYears !== "string" || forecast.durationYears.length > 8
@@ -52,6 +53,7 @@ export function validateFinance(value: unknown): FinanceData {
       || (forecast.compoundingInterval !== undefined && forecast.compoundingInterval !== "monthly" && forecast.compoundingInterval !== "annual")) {
       throw new BudgetError(400, "Invalid analysis forecast settings");
     }
+    delete forecast.compoundingInterval;
   }
   const ids = new Set<string>();
   const checkId = (value: unknown) => {

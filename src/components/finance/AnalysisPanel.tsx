@@ -10,14 +10,14 @@ interface Props {
   onForecastSettingsChange?: (settings: AnalysisForecastSettings) => void;
 }
 
-const defaultForecastSettings: AnalysisForecastSettings = { annualInterestRate: "", durationYears: "10", initialCapital: "0", compoundingInterval: "monthly" };
+const defaultForecastSettings: AnalysisForecastSettings = { annualInterestRate: "", durationYears: "10", initialCapital: "0" };
 
 export default function AnalysisPanel({ stats, currency, showPercent = true, forecastSettings: savedForecastSettings, onForecastSettingsChange }: Props) {
   const [period, setPeriod] = useState<"monthly" | "annual">("monthly");
   const [forecastSettings, setForecastSettings] = useState(savedForecastSettings ?? defaultForecastSettings);
   useEffect(() => {
     if (savedForecastSettings) setForecastSettings(savedForecastSettings);
-  }, [savedForecastSettings?.annualInterestRate, savedForecastSettings?.durationYears, savedForecastSettings?.initialCapital, savedForecastSettings?.compoundingInterval]);
+  }, [savedForecastSettings?.annualInterestRate, savedForecastSettings?.durationYears, savedForecastSettings?.initialCapital]);
   const updateForecastSettings = (settings: AnalysisForecastSettings) => {
     setForecastSettings(settings);
     onForecastSettingsChange?.(settings);
@@ -239,7 +239,6 @@ interface InvestmentForecastProps {
 function InvestmentForecast({ monthlyInvestment, monthlySavings, settings, onSettingsChange, currency, formatAmount }: InvestmentForecastProps) {
   const { annualInterestRate: rateInput, durationYears: yearsInput } = settings;
   const initialCapitalInput = settings.initialCapital ?? "0";
-  const compoundingInterval = settings.compoundingInterval ?? "monthly";
   const annualRate = Number(rateInput) / 100;
   const years = Number(yearsInput);
   const initialCapital = Number(initialCapitalInput || "0");
@@ -255,11 +254,7 @@ function InvestmentForecast({ monthlyInvestment, monthlySavings, settings, onSet
 
   if (hasValidInputs) {
     for (let month = 1; month <= months; month += 1) {
-      if (compoundingInterval === "monthly") {
-        investmentBalance *= 1 + annualRate / 12;
-      } else if (month % 12 === 0) {
-        investmentBalance *= 1 + annualRate;
-      }
+      investmentBalance *= 1 + annualRate / 12;
       investmentBalance += monthlyInvestment;
     }
     investmentBalance = roundMoney(investmentBalance);
@@ -314,29 +309,15 @@ function InvestmentForecast({ monthlyInvestment, monthlySavings, settings, onSet
             aria-label="Investment duration in years"
           />
         </label>
-        <label className="col-span-2 space-y-1 text-xs text-muted-foreground sm:col-span-3">
-          <span>Compounding interval</span>
-          <select
-            value={compoundingInterval}
-            onChange={(event) => onSettingsChange({ ...settings, compoundingInterval: event.target.value as "monthly" | "annual" })}
-            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Compounding interval"
-          >
-            <option value="monthly">Monthly</option>
-            <option value="annual">Annually</option>
-          </select>
-        </label>
       </div>
       {hasValidInputs ? (
         <div className="mt-4">
           <h5 className="mb-2 text-xs font-semibold text-foreground">After {years} years</h5>
-          <div className="rounded-lg border border-border/70 p-3">
-            <ForecastBreakdownRow label="Starting capital" value={initialCapital} currency={currency} formatAmount={formatAmount} />
-            <ForecastBreakdownRow label="Contributions (principal)" operator="+" value={investmentContributions} currency={currency} formatAmount={formatAmount} />
-            <ForecastBreakdownRow label="Investment interest" operator="+" value={totalInterest} currency={currency} formatAmount={formatAmount} />
-            <ForecastBreakdownRow label="Remaining saved" operator="+" value={savedRemaining} currency={currency} formatAmount={formatAmount} />
-            <ForecastBreakdownRow label="Total accumulated" operator="=" value={projectedBalance} currency={currency} formatAmount={formatAmount} total />
-          </div>
+          <ForecastBreakdownRow label="Starting capital" value={initialCapital} currency={currency} formatAmount={formatAmount} />
+          <ForecastBreakdownRow label="Contributions (principal)" operator="+" value={investmentContributions} currency={currency} formatAmount={formatAmount} />
+          <ForecastBreakdownRow label="Investment interest" operator="+" value={totalInterest} currency={currency} formatAmount={formatAmount} />
+          <ForecastBreakdownRow label="Remaining saved" operator="+" value={savedRemaining} currency={currency} formatAmount={formatAmount} />
+          <ForecastBreakdownRow label="Total accumulated" operator="=" value={projectedBalance} currency={currency} formatAmount={formatAmount} total />
         </div>
       ) : (
           <p className="mt-3 text-xs text-muted-foreground">Enter a rate from 0 to 100%, starting capital of 0 or more, and a duration from 1 to 50 years to see your projection.</p>

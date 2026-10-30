@@ -40,7 +40,6 @@ export interface AnalysisForecastSettings {
   annualInterestRate: string;
   durationYears: string;
   initialCapital?: string;
-  compoundingInterval?: "monthly" | "annual";
 }
 
 export interface Stats {

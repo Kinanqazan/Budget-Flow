@@ -61,7 +61,7 @@ function branchPath(branch: Branch, sourceY: number): string {
 }
 
 export default function MobileAllocation({ data, stats, showPercent = true, currency = "€" }: Props) {
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set());
   const [width, setWidth] = useState(360);
   const chartRef = useRef<HTMLDivElement>(null);
   const diagramId = useId().replace(/:/g, "");
@@ -109,7 +109,7 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
         const lines = pairLines[index];
         const titleY = nextY + 24 + (rowLineCount - lines.length) * 8;
         const valueY = nextY + 24 + rowLineCount * 16;
-        const expanded = expandedCategory === entry.id;
+        const expanded = expandedCategories.has(entry.id);
         const items = entry.items.filter((item) => item.value > 0).sort((a, b) => b.value - a.value);
         let childY = valueY + 140;
         const children = expanded ? items.map((item) => {
@@ -156,9 +156,14 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
       sourceX += branch.flowWidth + gap;
     });
     return { branches, bundleWidth, height: Math.max(250, nextY - 72) };
-  }, [stats.cats, stats.remaining, data.remainingColor, expandedCategory, sourceY, width]);
+  }, [stats.cats, stats.remaining, data.remainingColor, expandedCategories, sourceY, width]);
 
-  const toggleCategory = (id: string) => setExpandedCategory((current) => current === id ? null : id);
+  const toggleCategory = (id: string) => setExpandedCategories((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
 
   return (
     <div className="mx-auto w-full max-w-xl pb-5">
@@ -224,6 +229,9 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
             {tree.branches.map((branch) => {
               const detailsId = `${diagramId}-items-${branch.id}`;
               const barWidth = Math.max(6, branch.flowWidth + 2);
+              const titleTextWidth = Math.max(...branch.lines.map((line) => line.length * 6.8));
+              const chevronX = branch.x + Math.min(branch.width / 2 - 5, titleTextWidth / 2 + 7);
+              const chevronY = branch.titleY + (branch.lines.length - 1) * 8 - 4;
               const childSide = branch.side || -1;
               const railX = branch.x - childSide * (branch.width / 2 - 2);
               const childSourceY = branch.valueY + 18;
@@ -287,9 +295,12 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
                     <rect
                       x={branch.x - branch.width / 2} y={branch.y - 10}
                       width={branch.width} height={branch.valueY - branch.y + 24} rx="12"
-                      className="fill-muted opacity-0 transition-opacity group-hover:opacity-40 group-focus-visible:opacity-60"
+                      fill="transparent" pointerEvents="all"
                     />
-                    <rect x={branch.x - barWidth / 2} y={branch.y} width={barWidth} height="6" rx="3" fill={branch.color} />
+                    <rect
+                      x={branch.x - barWidth / 2} y={branch.y} width={barWidth} height="6" rx="3" fill={branch.color}
+                      className="group-focus-visible:stroke-foreground group-focus-visible:stroke-2"
+                    />
                     <text x={branch.x} y={branch.titleY} textAnchor="middle" fontSize="13" fontWeight="600" className="fill-foreground">
                       {branch.lines.map((line, index) => <tspan key={index} x={branch.x} dy={index === 0 ? 0 : 16}>{line}</tspan>)}
                     </text>
@@ -300,7 +311,7 @@ export default function MobileAllocation({ data, stats, showPercent = true, curr
                       <path
                         aria-hidden="true"
                         d={branch.expanded ? "M -3 2 L 0 -1 L 3 2" : "M -3 -1 L 0 2 L 3 -1"}
-                        transform={`translate(${branch.x + branch.width / 2 - 12}, ${branch.valueY - 4})`}
+                        transform={`translate(${chevronX}, ${chevronY})`}
                         fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                         className="text-muted-foreground"
                       />

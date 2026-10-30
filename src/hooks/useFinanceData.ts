@@ -130,7 +130,9 @@ export function useFinanceData(userId: string | undefined, authenticated: boolea
     markEdited(); setDataState(value);
   }, [markEdited]);
   const setAnalysisForecast = useCallback((settings: AnalysisForecastSettings) => {
-    const nextData = { ...data, analysisForecast: settings };
+    const { annualInterestRate, durationYears, initialCapital } = settings;
+    const forecastSettings = { annualInterestRate, durationYears, initialCapital };
+    const nextData = { ...data, analysisForecast: forecastSettings };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData)); } catch { /* Keep the in-memory settings if local storage is unavailable. */ }
     markEdited();
     setDataState(nextData);
