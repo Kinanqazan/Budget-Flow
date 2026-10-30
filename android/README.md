@@ -18,6 +18,8 @@ APK output:
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
+Each build also updates `android/releases/BudgetFlow.apk`. Commit that file with your changes to publish the APK in the GitHub Releases page when you push to `main`.
+
 ## Private or self-signed certificates
 
 The APK trusts Android's system certificate authorities and user-installed certificates. Install the certificate authority that signed the server certificate in Android's security settings before connecting. TLS verification remains enabled: the certificate must be valid for the hostname in the address. The app blocks plain HTTP and mixed-content requests.

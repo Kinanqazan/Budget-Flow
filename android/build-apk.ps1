@@ -63,4 +63,9 @@ try {
 
 $apkPath = Join-Path $androidRoot 'app\build\outputs\apk\release\app-release.apk'
 if (-not (Test-Path -LiteralPath $apkPath)) { throw 'Gradle completed but the expected APK was not created.' }
+$releaseDirectory = Join-Path $androidRoot 'releases'
+$releaseApkPath = Join-Path $releaseDirectory 'BudgetFlow.apk'
+New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
+Copy-Item -LiteralPath $apkPath -Destination $releaseApkPath -Force
 Write-Output "APK: $apkPath"
+Write-Output "Release APK: $releaseApkPath"

@@ -1,0 +1,26 @@
+name: Publish Android APK
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Publish APK release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: apk-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: "BudgetFlow APK #${{ github.run_number }}"
+          body: "APK copied from android/releases/BudgetFlow.apk at commit ${{ github.sha }}."
+          make_latest: true
+          files: android/releases/BudgetFlow.apk
