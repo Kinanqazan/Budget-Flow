@@ -117,24 +117,67 @@ const getCategoryItemColor = (catColor: string, itemIndex: number, totalItems: n
   return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
 };
 
-const getDonutLabelColor = (backgroundColor: string) => {
-  let hex = backgroundColor.replace(/^#/, "");
+type RGB = [number, number, number];
+
+const parseHexColor = (color: string): RGB | undefined => {
+  let hex = color.replace(/^#/, "");
   if (hex.length === 3) hex = hex.split("").map((value) => value + value).join("");
   if (hex.length === 8) hex = hex.slice(0, 6);
-  if (!/^[\da-f]{6}$/i.test(hex)) return "hsl(var(--foreground))";
+  if (!/^[\da-f]{6}$/i.test(hex)) return undefined;
+  return [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16)) as RGB;
+};
 
-  const [r, g, b] = [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255);
-  const linearize = (channel: number) =>
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  const luminance = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b);
-  const darkContrast = (luminance + 0.05) / 0.05;
-  const lightContrast = 1.05 / (luminance + 0.05);
+const rgbToHex = (rgb: RGB) => `#${rgb.map((channel) => Math.round(channel).toString(16).padStart(2, "0")).join("")}`;
 
-  return darkContrast >= lightContrast ? "#111827" : "#FFFFFF";
+const getBackgroundColor = () => {
+  const fallback = document.documentElement.classList.contains("dark") ? "#212121" : "#f0f2f7";
+  const match = getComputedStyle(document.documentElement).getPropertyValue("--background").match(/^\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/);
+  if (!match) return fallback;
+
+  const hue = Number(match[1]);
+  const saturation = Number(match[2]) / 100;
+  const lightness = Number(match[3]) / 100;
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const x = chroma * (1 - Math.abs((hue / 60) % 2 - 1));
+  const offset = lightness - chroma / 2;
+  const channels = hue < 60 ? [chroma, x, 0]
+    : hue < 120 ? [x, chroma, 0]
+    : hue < 180 ? [0, chroma, x]
+    : hue < 240 ? [0, x, chroma]
+    : hue < 300 ? [x, 0, chroma]
+    : [chroma, 0, x];
+
+  return rgbToHex(channels.map((channel) => (channel + offset) * 255) as RGB);
+};
+
+const getDonutValueColor = (segmentColor: string, backgroundColor: string) => {
+  const segment = parseHexColor(segmentColor);
+  const background = parseHexColor(backgroundColor);
+  if (!segment || !background) return "hsl(var(--foreground))";
+
+  const linearize = (channel: number) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (rgb: RGB) => 0.2126 * linearize(rgb[0]) + 0.7152 * linearize(rgb[1]) + 0.0722 * linearize(rgb[2]);
+  const backgroundLuminance = luminance(background);
+  const target = backgroundLuminance > 0.179 ? 0 : 255;
+
+  for (let step = 1; step <= 20; step += 1) {
+    const mix = step / 20;
+    const candidate = segment.map((channel) => channel + (target - channel) * mix) as RGB;
+    const candidateLuminance = luminance(candidate);
+    const contrast = (Math.max(backgroundLuminance, candidateLuminance) + 0.05) /
+      (Math.min(backgroundLuminance, candidateLuminance) + 0.05);
+    if (contrast >= 4.5) return rgbToHex(candidate);
+  }
+
+  return backgroundLuminance > 0.179 ? "#111827" : "#FFFFFF";
 };
 
 export default function DonutChart({ data, stats, currency = "€", showPercent = true }: Props) {
   const isMobile = useIsMobile();
+  const pageBackground = getBackgroundColor();
   const { segments, mobileSegments, total, centerText, centerLabel, isOverspending } = useMemo(() => {
     const fmt = (v: number) => Math.round(v).toLocaleString("en-US") + " " + currency;
 
@@ -410,8 +453,9 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
                   y={clampedY + 12}
                   textAnchor={isRightSide ? "start" : "end"}
                   dominantBaseline="middle"
-                  className="fill-muted-foreground"
-                  fontSize="14"
+                  fill={getDonutValueColor(seg.color, pageBackground)}
+                  fontSize="18"
+                  fontWeight="700"
                   fontFamily="'Space Grotesk', sans-serif"
                 >
                   {showPercent ? `${seg.percentage}%` : `${seg.total.toLocaleString("en-US")} ${currency}`}
@@ -424,7 +468,7 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
             const midAngle = (seg.startAngle + seg.endAngle) / 2;
             const angle = seg.endAngle - seg.startAngle;
             const label = formatMobileValue(seg);
-            const labelWidth = label.length * 8;
+            const labelWidth = label.length * 11;
             const minAngle = ((labelWidth + 12) / 185) * (180 / Math.PI);
 
             // Leave narrow slices uncluttered; the category key below still names them.
@@ -441,8 +485,8 @@ export default function DonutChart({ data, stats, currency = "€", showPercent 
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`rotate(${rotation}, ${position.x}, ${position.y})`}
-                  fill={getDonutLabelColor(seg.color)}
-                  fontSize="18"
+                  fill={getDonutValueColor(seg.color, seg.color)}
+                  fontSize="24"
                   fontWeight="700"
                   fontFamily="'Space Grotesk', sans-serif"
                 >
