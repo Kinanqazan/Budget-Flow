@@ -59,7 +59,7 @@ export function useAuth() {
       setUser(u);
       setUsername(u.username);
       return { error: null };
-    } catch (e: any) {
+    } catch (e: unknown) {
       return { error: e };
     }
   };
@@ -72,7 +72,7 @@ export function useAuth() {
       setUsername(u.username);
       setRegistrationAvailable(false);
       return { error: null };
-    } catch (e: any) {
+    } catch (e: unknown) {
       api.auth.setupStatus().then((status) => {
         setRegistrationAvailable(status.authEnabled && status.needsSetup);
       }).catch(() => {});

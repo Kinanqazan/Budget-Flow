@@ -20,7 +20,7 @@ const originalAuthEnabled = config.AUTH_ENABLED;
 
 async function buildApp(authEnabled?: boolean) {
   if (authEnabled !== undefined) {
-    (config as any).AUTH_ENABLED = authEnabled;
+    config.AUTH_ENABLED = authEnabled;
   }
 
   const { initDB } = await import("../db/schema");
@@ -37,7 +37,7 @@ async function buildApp(authEnabled?: boolean) {
 
 describe("Auth Routes", () => {
   beforeEach(() => {
-    (config as any).AUTH_ENABLED = originalAuthEnabled;
+    config.AUTH_ENABLED = originalAuthEnabled;
   });
 
   describe("POST /api/auth/register", () => {

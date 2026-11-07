@@ -12,7 +12,6 @@
 
 @layer base {
   :root {
-    --table-separator: 228 20% 84%;
     --background: 228 25% 96%;
     --foreground: 230 35% 15%;
 
@@ -60,7 +59,6 @@
   }
 
   .dark {
-    --table-separator: 0 0% 38%;
     --background: 0 0% 13%;
     --foreground: 0 0% 90%;
     --card: 0 0% 18%;
@@ -105,28 +103,70 @@
   }
 }
 
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .sidebar-action-row .sidebar-row-actions {
+    opacity: 0;
+  }
+
+  .sidebar-action-row:hover .sidebar-row-actions,
+  .sidebar-action-row:focus-within .sidebar-row-actions,
+  .sidebar-row-actions[data-state="open"] {
+    opacity: 1;
+  }
+}
+
 .finance-table {
   border-collapse: separate;
   border-spacing: 0;
-  border-bottom: 1px solid hsl(var(--table-separator));
+}
+
+.finance-table-header {
+  background: hsl(0 0% 20%);
+}
+
+.finance-table-header th {
+  color: hsl(0 0% 94%);
+}
+
+.dark .finance-table-header {
+  background: hsl(0 0% 11%);
 }
 
 .finance-table thead th {
-  border-top: 1px solid hsl(var(--table-separator));
-  border-bottom: 1px solid hsl(var(--table-separator));
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: 10px;
+  letter-spacing: 0.08em;
 }
 
 .finance-table tbody tr:not([aria-hidden]) > td {
-  border-bottom: 1px solid hsl(var(--table-separator));
+  border-bottom: 1px solid hsl(var(--border) / 0.65);
 }
 
-.finance-table tbody tr[aria-hidden] > td {
-  border-bottom: 1px solid hsl(var(--table-separator));
+.finance-table tbody tr:last-child > td {
+  border-bottom: 0;
 }
 
-.finance-table th:not(:last-child):not(:nth-last-child(2)),
-.finance-table td:not(:last-child):not(:nth-last-child(2)) {
-  border-right: 1px solid hsl(var(--table-separator));
+.finance-table .finance-table-total > td {
+  background: hsl(0 0% 97%);
+  border-bottom: 1px solid hsl(0 0% 87%);
+}
+
+.dark .finance-table .finance-table-total > td {
+  background: hsl(0 0% 21%);
+  border-bottom-color: hsl(0 0% 32%);
+}
+
+.finance-table .finance-table-remaining > td {
+  background: hsl(0 0% 93%);
+}
+
+.dark .finance-table .finance-table-remaining > td {
+  background: hsl(0 0% 26%);
+}
+
+.finance-table input:focus-visible {
+  outline: 2px solid hsl(var(--ring) / 0.55);
+  outline-offset: 2px;
 }
 
 @layer utilities {

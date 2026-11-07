@@ -447,7 +447,7 @@ export default function FinanceTable({
   }, [flattenedItems]);
 
   const renderSectionTotal = (total: { monthly: number; annual: number }, label = "Total", emphasized = true) => (
-    <tr className="text-sm">
+    <tr className={`finance-table-total text-sm font-semibold ${label === "Remaining" ? "finance-table-remaining" : ""}`}>
       {visibleColumns.map((col) => {
         const width = getColumnWidth(col);
         if (col === "name") {
@@ -468,8 +468,8 @@ export default function FinanceTable({
   );
 
   return (
-    <div className="flex h-full w-full flex-col gap-2">
-      <div className="mx-4 order-last relative z-10 mt-4 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-background px-2 py-2">
+    <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-3 px-3 py-4 sm:px-6 md:py-6">
+      <div className="order-last flex flex-wrap items-center justify-between gap-3 px-1 py-1">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Contract status legend">
           <span className="inline-flex items-center gap-1"><Clock size={12} /> Expired</span>
           <span className="inline-flex items-center gap-1"><AlertTriangle size={12} className="text-destructive" /> Urgent (30 days or less)</span>
@@ -484,7 +484,7 @@ export default function FinanceTable({
 
       {/* Notice alerts banner */}
       {activeWarnings.length > 0 && (
-        <div className="mx-4 flex flex-wrap items-center gap-x-3 gap-y-1 px-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs">
             {warningStatuses.map((status) => (
               <span
                 key={status.label}
@@ -497,14 +497,14 @@ export default function FinanceTable({
       )}
 
       {/* Main Table area */}
-      <div className="flex min-h-0 flex-col overflow-hidden">
-        <div className="overflow-auto scrollbar-hidden">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="max-h-[max(12rem,calc(100dvh-12rem))] overflow-auto scrollbar-thin">
           <table
             className="finance-table w-full text-left"
             style={{ tableLayout: "fixed", minWidth: visibleColumns.reduce((total, column) => total + getColumnWidth(column), 0) }}
           >
             <thead className="sticky top-0 z-10">
-              <tr className="bg-background/95 backdrop-blur text-xs uppercase font-bold text-muted-foreground tracking-wider select-none">
+              <tr className="finance-table-header text-xs uppercase font-bold text-muted-foreground tracking-wider select-none">
                 {visibleColumns.map((col) => {
                   const idx = columns.indexOf(col);
                   const width = getColumnWidth(col);
@@ -567,7 +567,6 @@ export default function FinanceTable({
                 flattenedItems.map((fi, index) => {
                   const { item, categoryIndex: ci, itemIndex: ii } = fi;
                   const endsSection = index === flattenedItems.length - 1 || flattenedItems[index + 1].categoryType !== fi.categoryType;
-                  const startsSection = index > 0 && flattenedItems[index - 1].categoryType !== fi.categoryType;
 
                   // Compute notice alert status
                   let alertBadge = null;
@@ -607,13 +606,8 @@ export default function FinanceTable({
 
                   return (
                     <React.Fragment key={item.id}>
-                    {startsSection && (
-                      <tr aria-hidden="true">
-                        <td colSpan={visibleColumns.length} className="h-4 p-0" />
-                      </tr>
-                    )}
                     <tr
-                      className="even:bg-muted/10 hover:bg-accent/35 group transition-colors"
+                      className="hover:bg-accent/40 group transition-colors"
                       style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.16) } : undefined}
                     >
                       {visibleColumns.map((col) => {
@@ -907,11 +901,6 @@ export default function FinanceTable({
                   </React.Fragment>
                 );
               })
-              )}
-              {flattenedItems.some((fi) => fi.categoryType === "investment") && (
-                <tr aria-hidden="true">
-                  <td colSpan={visibleColumns.length} className="h-4 p-0" />
-                </tr>
               )}
               {renderSectionTotal({ monthly: stats.remaining, annual: stats.remaining * 12 }, "Remaining", true)}
             </tbody>

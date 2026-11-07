@@ -19,11 +19,11 @@ vi.mock("better-sqlite3", () => {
 
 describe("Auth Middleware", () => {
   beforeEach(() => {
-    (config as any).AUTH_ENABLED = true;
+    config.AUTH_ENABLED = true;
   });
 
   it("attaches synthetic user when AUTH_ENABLED=false", async () => {
-    (config as any).AUTH_ENABLED = false;
+    config.AUTH_ENABLED = false;
 
     const app = Fastify();
     app.get("/test", { preHandler: [authMiddleware] }, async (req) => {

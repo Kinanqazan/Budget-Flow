@@ -15,9 +15,14 @@ const defaultForecastSettings: AnalysisForecastSettings = { annualInterestRate: 
 export default function AnalysisPanel({ stats, currency, showPercent = true, forecastSettings: savedForecastSettings, onForecastSettingsChange }: Props) {
   const [period, setPeriod] = useState<"monthly" | "annual">("monthly");
   const [forecastSettings, setForecastSettings] = useState(savedForecastSettings ?? defaultForecastSettings);
+  const savedAnnualInterestRate = savedForecastSettings?.annualInterestRate;
+  const savedDurationYears = savedForecastSettings?.durationYears;
+  const savedInitialCapital = savedForecastSettings?.initialCapital;
   useEffect(() => {
-    if (savedForecastSettings) setForecastSettings(savedForecastSettings);
-  }, [savedForecastSettings?.annualInterestRate, savedForecastSettings?.durationYears, savedForecastSettings?.initialCapital]);
+    if (savedAnnualInterestRate !== undefined && savedDurationYears !== undefined && savedInitialCapital !== undefined) {
+      setForecastSettings({ annualInterestRate: savedAnnualInterestRate, durationYears: savedDurationYears, initialCapital: savedInitialCapital });
+    }
+  }, [savedAnnualInterestRate, savedDurationYears, savedInitialCapital]);
   const updateForecastSettings = (settings: AnalysisForecastSettings) => {
     setForecastSettings(settings);
     onForecastSettingsChange?.(settings);

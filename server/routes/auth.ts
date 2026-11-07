@@ -53,8 +53,8 @@ export async function authRoutes(app: FastifyInstance) {
         token,
         user: { id: row.id, username },
       });
-    } catch (err: any) {
-      if (err.message?.includes("UNIQUE constraint")) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
         return reply.status(409).send({ error: "Username already taken" });
       }
       throw err;

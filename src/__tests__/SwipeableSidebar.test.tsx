@@ -33,7 +33,7 @@ function setup() {
   const drawer = view.container.querySelector<HTMLElement>("#finance-sidebar")!;
   const progress = () => Number(surface.style.getPropertyValue("--sidebar-progress"));
   vi.spyOn(drawer, "getBoundingClientRect").mockImplementation(() => ({
-    right: progress() * 280,
+    right: progress() * 320,
   } as DOMRect));
   return { surface, drawer, progress, click, renderContent };
 }
@@ -56,14 +56,14 @@ describe("SwipeableSidebar", () => {
     const chart = screen.getByTestId("chart");
     touch(chart, "touchstart", 160, 300, 0);
     expect(touch(chart, "touchmove", 188, 302, 200).defaultPrevented).toBe(true);
-    expect(progress()).toBeCloseTo(0.1);
+    expect(progress()).toBeCloseTo(28 / 320);
     expect(drawer.inert).toBe(false);
     expect(surface.dataset.sidebarDragging).toBe("true");
     const renders = renderContent.mock.calls.length;
     touch(chart, "touchmove", 216, 302, 400);
-    expect(progress()).toBeCloseTo(0.2);
+    expect(progress()).toBeCloseTo(56 / 320);
     touch(chart, "touchmove", 174, 302, 600);
-    expect(progress()).toBeCloseTo(0.05);
+    expect(progress()).toBeCloseTo(14 / 320);
     expect(renderContent.mock.calls.length).toBe(renders);
     touch(chart, "touchend", 174, 302, 800);
     expect(progress()).toBe(0);
@@ -81,7 +81,7 @@ describe("SwipeableSidebar", () => {
     const close = screen.getByRole("button", { name: "Close sidebar" });
     touch(close, "touchstart", 240, 100, 1000);
     touch(close, "touchmove", 100, 100, 1500);
-    expect(progress()).toBeCloseTo(0.5);
+    expect(progress()).toBeCloseTo(180 / 320);
     touch(close, "touchmove", 60, 100, 1700);
     touch(close, "touchend", 60, 100, 1900);
     expect(progress()).toBe(0);
@@ -200,7 +200,7 @@ describe("SwipeableSidebar", () => {
     scroller.scrollLeft = 0;
     touch(scroller, "touchstart", 160, 300, 500);
     expect(touch(scroller, "touchmove", 220, 300, 700).defaultPrevented).toBe(true);
-    expect(progress()).toBeCloseTo(60 / 280);
+    expect(progress()).toBeCloseTo(60 / 320);
   });
 
   it("preserves table resizing and text editing gestures", () => {
@@ -233,7 +233,7 @@ describe("SwipeableSidebar", () => {
     const chart = screen.getByTestId("chart");
     touch(chart, "touchstart", 200, 300, 0);
     touch(chart, "touchmove", 170, 300, 200);
-    expect(progress()).toBeCloseTo(90 / 280);
+    expect(progress()).toBeCloseTo(90 / 320);
     touch(chart, "touchend", 170, 300, 400);
     expect(progress()).toBe(0);
   });
