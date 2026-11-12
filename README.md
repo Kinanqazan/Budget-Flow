@@ -32,7 +32,7 @@
 - Compare income and remaining budget with spending and investment totals.
 - Break expenses and investments down by category; expand investment categories to see individual contributions.
 - Switch between monthly and annual totals, or show amounts as percentages of income.
-- Explore an investment forecast from starting capital and current monthly investment contributions, using an assumed annual rate, time horizon, and monthly or annual compounding. The projection also shows savings from the remaining monthly budget separately.
+- Explore an investment forecast from starting capital and current monthly investment contributions, using an assumed annual rate, time horizon and monthly or yearly compounding. Contributions are made at the beginning of each month. A chart shows invested principal and interest; savings from the remaining monthly budget are shown separately.
 
 ### Budget planning
 - Edit multiple income sources, expense and investment categories, and their items. Reorder entries and customize category colors.

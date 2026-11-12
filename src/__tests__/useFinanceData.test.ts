@@ -38,6 +38,13 @@ describe("useFinanceData", () => {
     localStorage.clear();
   });
 
+  it("keeps the forecast compounding interval when saving settings", () => {
+    const { result } = renderHook(() => useFinanceData("user1", false));
+    act(() => result.current.setAnalysisForecast({ annualInterestRate: "6", durationYears: "5", initialCapital: "63000", compoundingInterval: "annual" }));
+    expect(result.current.data.analysisForecast?.compoundingInterval).toBe("annual");
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).analysisForecast.compoundingInterval).toBe("annual");
+  });
+
   describe("stats calculation", () => {
     it("calculates stats from data", () => {
       setLocalStorageData({

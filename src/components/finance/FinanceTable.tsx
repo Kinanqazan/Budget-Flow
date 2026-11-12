@@ -497,8 +497,8 @@ export default function FinanceTable({
       )}
 
       {/* Main Table area */}
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="max-h-[max(12rem,calc(100dvh-12rem))] overflow-auto scrollbar-thin">
+      <div className="finance-table-frame relative min-w-0 overflow-hidden rounded-2xl bg-card shadow-sm">
+        <div className="finance-table-scroll max-h-[max(12rem,calc(100dvh-12rem))] overflow-auto scrollbar-thin">
           <table
             className="finance-table w-full text-left"
             style={{ tableLayout: "fixed", minWidth: visibleColumns.reduce((total, column) => total + getColumnWidth(column), 0) }}
@@ -608,7 +608,7 @@ export default function FinanceTable({
                     <React.Fragment key={item.id}>
                     <tr
                       className="hover:bg-accent/40 group transition-colors"
-                      style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.16) } : undefined}
+                      style={colorRows ? { backgroundColor: withAlpha(fi.categoryColor, 0.26) } : undefined}
                     >
                       {visibleColumns.map((col) => {
                         const width = getColumnWidth(col);
@@ -628,7 +628,7 @@ export default function FinanceTable({
                                       <button
                                         type="button"
                                         onClick={() => setIconPickerItemId(iconPickerItemId === item.id ? null : item.id)}
-                                        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                        className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${colorRows ? "text-foreground dark:text-white hover:bg-foreground/10" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                                         title="Choose item icon"
                                         aria-label={`Choose icon for ${item.name}`}
                                       >

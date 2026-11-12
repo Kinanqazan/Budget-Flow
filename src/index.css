@@ -115,31 +115,50 @@
   }
 }
 
+.finance-table-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border: 1px solid hsl(228 12% 72%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.dark .finance-table-frame::after {
+  border-color: hsl(0 0% 55%);
+}
+
 .finance-table {
   border-collapse: separate;
   border-spacing: 0;
 }
 
 .finance-table-header {
-  background: hsl(0 0% 20%);
-}
-
-.finance-table-header th {
-  color: hsl(0 0% 94%);
+  background: hsl(var(--secondary));
 }
 
 .dark .finance-table-header {
-  background: hsl(0 0% 11%);
+  background: hsl(0 0% 14%);
+}
+
+.finance-table-header th {
+  color: hsl(var(--secondary-foreground));
 }
 
 .finance-table thead th {
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(228 12% 72%);
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 
 .finance-table tbody tr:not([aria-hidden]) > td {
-  border-bottom: 1px solid hsl(var(--border) / 0.65);
+  border-bottom: 1px solid hsl(228 12% 72%);
+}
+
+.dark .finance-table thead th,
+.dark .finance-table tbody tr:not([aria-hidden]) > td {
+  border-bottom-color: hsl(0 0% 55%);
 }
 
 .finance-table tbody tr:last-child > td {
@@ -147,26 +166,28 @@
 }
 
 .finance-table .finance-table-total > td {
-  background: hsl(0 0% 97%);
-  border-bottom: 1px solid hsl(0 0% 87%);
+  background: hsl(var(--card));
 }
 
-.dark .finance-table .finance-table-total > td {
-  background: hsl(0 0% 21%);
-  border-bottom-color: hsl(0 0% 32%);
+.finance-table .finance-table-total:not(.finance-table-remaining) > td {
+  background: hsl(228 22% 95%);
 }
 
-.finance-table .finance-table-remaining > td {
-  background: hsl(0 0% 93%);
-}
-
-.dark .finance-table .finance-table-remaining > td {
-  background: hsl(0 0% 26%);
+.dark .finance-table .finance-table-total:not(.finance-table-remaining) > td {
+  background: hsl(0 0% 14%);
 }
 
 .finance-table input:focus-visible {
   outline: 2px solid hsl(var(--ring) / 0.55);
   outline-offset: 2px;
+}
+
+.finance-table-scroll {
+  scrollbar-width: none;
+}
+
+.finance-table-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 @layer utilities {

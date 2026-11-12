@@ -18,6 +18,40 @@ const data: FinanceData = {
 };
 const stats = calculateStats(data);
 
+it("matches the reference investment projection without adding uninvested budget", () => {
+  const example: FinanceData = {
+    income: [{ id: "income", name: "Income", value: 200 }],
+    categories: [{ id: "investments", name: "Investments", type: "investment", color: "#888", items: [{ id: "item", name: "Fund", value: 100 }] }],
+  };
+  render(<AnalysisPanel stats={calculateStats(example)} currency="€" forecastSettings={{ initialCapital: "5000", annualInterestRate: "5", durationYears: "10" }} />);
+  expect(screen.getByText("Investment total").parentElement?.parentElement?.textContent).toContain(Number(23827.98).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  expect(screen.getByText("All monthly deposits").parentElement?.parentElement?.textContent).toContain(Number(12000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const depositedAmount = Number(17000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const depositedRow = screen.getAllByText("Total deposited").find((element) => element.parentElement?.parentElement?.textContent?.includes(depositedAmount));
+  expect(depositedRow).toBeTruthy();
+  expect(screen.getByText("Remaining saved separately").parentElement?.parentElement?.textContent).toContain(Number(12000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  expect(screen.getByRole("img", { name: /yearly investment growth chart/i })).toBeTruthy();
+  const finalRow = screen.getAllByRole("row").find((row) => row.querySelector("th")?.textContent === "10");
+  expect(finalRow?.textContent).toContain(Number(23827.98).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+});
+
+it("switches between monthly and yearly interest for the reference example", () => {
+  const example: FinanceData = { income: [], categories: [{ id: "i", name: "Fund", type: "investment", color: "#888", items: [{ id: "p", name: "Plan", value: 1000 }] }] };
+  const onChange = vi.fn();
+  render(<AnalysisPanel stats={calculateStats(example)} currency="€" forecastSettings={{ initialCapital: "63000", annualInterestRate: "6", durationYears: "5" }} onForecastSettingsChange={onChange} />);
+  const total = () => screen.getByText("Investment total").parentElement?.parentElement?.textContent;
+  const money = (value: number) => value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  expect(total()).toContain(money(155096.44));
+  const interval = screen.getByRole("group", { name: "Interest compounding" });
+  const yearly = Array.from(interval.querySelectorAll("button")).find((button) => button.textContent === "Yearly")!;
+  fireEvent.click(yearly);
+  expect(total()).toContain(money(154151.79));
+  expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ compoundingInterval: "annual" }));
+  expect(screen.getAllByRole("row").find((row) => row.querySelector("th")?.textContent === "5")?.textContent).toContain(money(154151.79));
+  expect(screen.getByRole("heading", { name: "Expenses" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Investments" })).toBeTruthy();
+});
+
 beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
@@ -118,18 +152,26 @@ describe("Percentage display", () => {
 
   it("shows analysis percentages by default and restores monthly and annual amounts on request", () => {
     const view = render(<AnalysisPanel stats={stats} currency="€" />);
-    expect(screen.getByText("100%")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Remaining budget" }).textContent).toContain("50%");
     expect(screen.getByText("30%")).toBeTruthy();
-    expect(screen.getByText("50%")).toBeTruthy();
+    const categoryTotal = (name: string) => screen.getByRole("heading", { name }).parentElement?.parentElement?.textContent;
+    expect(categoryTotal("Expenses")).toContain("40%");
+    expect(categoryTotal("Investments")).toContain("10%");
     expect(screen.getByRole("button", { name: "Savings 10%" })).toBeTruthy();
     expect(screen.queryByText("75%")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "annual" }));
+    expect(categoryTotal("Expenses")).toContain("40%");
+    expect(categoryTotal("Investments")).toContain("10%");
     expect(screen.getByRole("button", { name: "Savings 10%" })).toBeTruthy();
     view.rerender(<AnalysisPanel stats={stats} currency="€" showPercent={false} />);
+    expect(categoryTotal("Expenses")).toContain(Number(14400).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    expect(categoryTotal("Investments")).toContain(Number(3600).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     expect(screen.getAllByText("monthly")).toHaveLength(1);
     expect(screen.getAllByText("annual")).toHaveLength(1);
     expect(screen.getByRole("button", { name: `Savings ${Number(3600).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "monthly" }));
+    expect(categoryTotal("Expenses")).toContain(Number(1200).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    expect(categoryTotal("Investments")).toContain(Number(300).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     expect(screen.getByRole("button", { name: `Savings ${Number(300).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` })).toBeTruthy();
     expect(view.container.textContent).toContain("€");
     expect(screen.queryByText("30%")).toBeNull();

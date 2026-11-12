@@ -60,6 +60,12 @@ describe.each(["SQLite", "JSON fallback"])("budget operations with %s", backend 
     expect(updated.json().affected).toMatchObject({ id: "e", value: 900, infos: "Keep me", billingPeriod: "Annual" });
     expect(updated.json().snapshot).toMatchObject({ currency: "$", dark_mode: false, revision: 2 });
   });
+  it("saves and restores the forecast compounding interval", async () => {
+    const forecast = { annualInterestRate: "6", durationYears: "5", initialCapital: "63000", compoundingInterval: "annual" };
+    const response = await app.inject({ method: "PUT", url: "/api/budget", payload: { finance_data: { ...data, analysisForecast: forecast }, expected_revision: 0, dark_mode: false, currency: "€" } });
+    expect(response.statusCode).toBe(200);
+    expect((await read()).finance_data.analysisForecast).toEqual(forecast);
+  });
   it("rejects stale browser/assistant saves and clients missing a revision", async () => {
     await save();
     expect((await action("update_entry", 1, { kind: "income", entry_id: "i", patch: { value: 4000 } })).statusCode).toBe(200);
